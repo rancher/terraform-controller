@@ -1,0 +1,7 @@
+kind: Module
+apiVersion: kerraform.cattle.io/v1
+metadata:
+  name: netes
+spec:
+  git:
+    url: git@github.com:rancherlabs/netes.git
