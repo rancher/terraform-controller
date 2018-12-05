@@ -1,5 +1,5 @@
 kind: Module
-apiVersion: kerraform.cattle.io/v1
+apiVersion: terraform-operator.cattle.io/v1
 metadata:
   name: netes
 spec:

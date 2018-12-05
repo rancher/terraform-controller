@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/rancher/kerraform/types/apis/kerraform.cattle.io/v1"
+	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/rancher/norman/generator"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
-const pkg = "github.com/rancher/kerraform/types"
+const pkg = "github.com/ibuildthecloud/terraform-operator/types"
 
 func main() {
 	if err := generator.DefaultGenerate(v1.Schemas, pkg, false, nil); err != nil {

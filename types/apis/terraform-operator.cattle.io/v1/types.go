@@ -9,14 +9,15 @@ import (
 
 var (
 	APIVersion = types.APIVersion{
-		Group:   "kerraform.cattle.io",
+		Group:   "terraform-operator.cattle.io",
 		Version: "v1",
-		Path:    "/v1-kerraform",
+		Path:    "/v1-terraform-operator",
 	}
 	Schemas = factory.
 		Schemas(&APIVersion).
 		MustImport(&APIVersion, Module{}).
-		MustImport(&APIVersion, Execution{})
+		MustImport(&APIVersion, Execution{}).
+		MustImport(&APIVersion, ExecutionRun{})
 
 	ModuleConditionGitUpdated = condition.Cond("GitUpdated")
 
@@ -58,7 +59,7 @@ type GitLocation struct {
 	Branch          string `json:"branch,omitempty"`
 	Tag             string `json:"tag,omitempty"`
 	Commit          string `json:"commit,omitempty"`
-	SecretName      string `json:"sshSecretName,omitempty"`
+	SecretName      string `json:"secretName,omitempty"`
 	IntervalSeconds int    `json:"intervalSeconds,omitempty"`
 }
 
@@ -112,5 +113,5 @@ type ExecutionRunStatus struct {
 	JobName       string                       `json:"jobName,omitempty"`
 	PlanOutput    string                       `json:"planOutput,omitempty"`
 	PlanConfirmed bool                         `json:"planConfirmed,omitempty"`
-	ApplyOutput   string                       `json:"planOutput,omitempty"`
+	ApplyOutput   string                       `json:"applyOutput,omitempty"`
 }

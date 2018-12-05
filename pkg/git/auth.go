@@ -14,13 +14,18 @@ const (
 	SSHAuthPrivateKey    = "ssh-privatekey"
 )
 
-var ErrNoSecret = fmt.Errorf("failed find one of the following keys in secret: %v", []string{
+var ErrNoSecret = fmt.Errorf("failed to find one of the following keys in secret: %v", []string{
 	BasicAuthUsernameKey,
 	BasicAuthPasswordKey,
 	SSHAuthPrivateKey,
 })
 
 func noop() {}
+
+type Auth struct {
+	Basic Basic
+	SSH   SSH
+}
 
 type Basic struct {
 	Username string
@@ -29,11 +34,6 @@ type Basic struct {
 
 type SSH struct {
 	Key []byte
-}
-
-type Auth struct {
-	Basic Basic
-	SSH   SSH
 }
 
 func FromSecret(secret map[string][]byte) (Auth, error) {
@@ -62,7 +62,7 @@ func (b Basic) fromSecret(secret map[string][]byte) bool {
 		b.Password = string(password)
 	}
 
-	return unameOK || pwdOK
+	return unameOK && pwdOK
 }
 
 func (b Basic) populate(gitURL string) string {

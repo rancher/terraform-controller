@@ -1,8 +1,8 @@
 package execution
 
 import (
-	"github.com/rancher/kerraform/pkg/controllers/execution/deploy"
-	"github.com/rancher/kerraform/types/apis/kerraform.cattle.io/v1"
+	"github.com/ibuildthecloud/terraform-operator/pkg/controllers/execution/deploy"
+	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 )

@@ -20,7 +20,7 @@ pipeline:
   publish-image:
     image: plugins/docker
     dockerfile: package/Dockerfile
-    repo: rancher/kerraform
+    repo: rancher/terraform-operator
     context: package/
     tag: ${DRONE_TAG}
     secrets: [docker_username, docker_password]

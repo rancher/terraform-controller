@@ -64,7 +64,7 @@ type SecretInterface interface {
 	Update(*v1.Secret) (*v1.Secret, error)
 	Delete(name string, options *metav1.DeleteOptions) error
 	DeleteNamespaced(namespace, name string, options *metav1.DeleteOptions) error
-	List(opts metav1.ListOptions) (*v1.SecretList, error)
+	List(opts metav1.ListOptions) (*SecretList, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() SecretController
@@ -215,9 +215,9 @@ func (s *secretClient) DeleteNamespaced(namespace, name string, options *metav1.
 	return s.objectClient.DeleteNamespaced(namespace, name, options)
 }
 
-func (s *secretClient) List(opts metav1.ListOptions) (*v1.SecretList, error) {
+func (s *secretClient) List(opts metav1.ListOptions) (*SecretList, error) {
 	obj, err := s.objectClient.List(opts)
-	return obj.(*v1.SecretList), err
+	return obj.(*SecretList), err
 }
 
 func (s *secretClient) Watch(opts metav1.ListOptions) (watch.Interface, error) {
@@ -254,25 +254,35 @@ func (s *secretClient) AddClusterScopedLifecycle(ctx context.Context, name, clus
 
 type SecretIndexer func(obj *v1.Secret) ([]string, error)
 
+type SecretClientCache interface {
+	Get(namespace, name string) (*v1.Secret, error)
+	List(namespace string, selector labels.Selector) ([]*v1.Secret, error)
+
+	Index(name string, indexer SecretIndexer)
+	GetIndexed(name, key string) ([]*v1.Secret, error)
+}
+
 type SecretClient interface {
-	Interface() SecretInterface
 	Create(*v1.Secret) (*v1.Secret, error)
 	Get(namespace, name string, opts metav1.GetOptions) (*v1.Secret, error)
 	Update(*v1.Secret) (*v1.Secret, error)
 	Delete(namespace, name string, options *metav1.DeleteOptions) error
-	List(namespace string, opts metav1.ListOptions) (*v1.SecretList, error)
+	List(namespace string, opts metav1.ListOptions) (*SecretList, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 
-	GetCached(namespace, name string) (*v1.Secret, error)
-	ListCached(namespace string, selector labels.Selector) ([]*v1.Secret, error)
-	EnableCache()
+	Cache() SecretClientCache
 
 	OnCreate(ctx context.Context, name string, sync SecretChangeHandlerFunc)
 	OnChange(ctx context.Context, name string, sync SecretChangeHandlerFunc)
 	OnRemove(ctx context.Context, name string, sync SecretChangeHandlerFunc)
+	Enqueue(namespace, name string)
 
-	Index(name string, indexer SecretIndexer)
-	GetIndexed(name, key string) ([]*v1.Secret, error)
+	Generic() controller.GenericController
+	Interface() SecretInterface
+}
+
+type secretClientCache struct {
+	client *secretClient2
 }
 
 type secretClient2 struct {
@@ -282,6 +292,14 @@ type secretClient2 struct {
 
 func (n *secretClient2) Interface() SecretInterface {
 	return n.iface
+}
+
+func (n *secretClient2) Generic() controller.GenericController {
+	return n.iface.Controller().Generic()
+}
+
+func (n *secretClient2) Enqueue(namespace, name string) {
+	n.iface.Controller().Enqueue(namespace, name)
 }
 
 func (n *secretClient2) Create(obj *v1.Secret) (*v1.Secret, error) {
@@ -300,7 +318,7 @@ func (n *secretClient2) Delete(namespace, name string, options *metav1.DeleteOpt
 	return n.iface.DeleteNamespaced(namespace, name, options)
 }
 
-func (n *secretClient2) List(namespace string, opts metav1.ListOptions) (*v1.SecretList, error) {
+func (n *secretClient2) List(namespace string, opts metav1.ListOptions) (*SecretList, error) {
 	return n.iface.List(opts)
 }
 
@@ -308,28 +326,29 @@ func (n *secretClient2) Watch(opts metav1.ListOptions) (watch.Interface, error) 
 	return n.iface.Watch(opts)
 }
 
-func (n *secretClient2) GetCached(namespace, name string) (*v1.Secret, error) {
-	n.assertCache()
-	return n.controller.Lister().Get(namespace, name)
+func (n *secretClientCache) Get(namespace, name string) (*v1.Secret, error) {
+	return n.client.controller.Lister().Get(namespace, name)
 }
 
-func (n *secretClient2) ListCached(namespace string, selector labels.Selector) ([]*v1.Secret, error) {
-	n.assertCache()
-	return n.controller.Lister().List(namespace, selector)
+func (n *secretClientCache) List(namespace string, selector labels.Selector) ([]*v1.Secret, error) {
+	return n.client.controller.Lister().List(namespace, selector)
 }
 
-func (n *secretClient2) EnableCache() {
+func (n *secretClient2) Cache() SecretClientCache {
 	n.loadController()
+	return &secretClientCache{
+		client: n,
+	}
 }
 
 func (n *secretClient2) OnCreate(ctx context.Context, name string, sync SecretChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &secretLifecycleDelegate{create: sync})
+	n.iface.AddLifecycle(ctx, name+"-create", &secretLifecycleDelegate{create: sync})
 }
 
 func (n *secretClient2) OnChange(ctx context.Context, name string, sync SecretChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &secretLifecycleDelegate{update: sync})
+	n.iface.AddLifecycle(ctx, name+"-change", &secretLifecycleDelegate{update: sync})
 }
 
 func (n *secretClient2) OnRemove(ctx context.Context, name string, sync SecretChangeHandlerFunc) {
@@ -337,9 +356,8 @@ func (n *secretClient2) OnRemove(ctx context.Context, name string, sync SecretCh
 	n.iface.AddLifecycle(ctx, name, &secretLifecycleDelegate{remove: sync})
 }
 
-func (n *secretClient2) Index(name string, indexer SecretIndexer) {
-	n.loadController()
-	err := n.controller.Informer().GetIndexer().AddIndexers(map[string]cache.IndexFunc{
+func (n *secretClientCache) Index(name string, indexer SecretIndexer) {
+	err := n.client.controller.Informer().GetIndexer().AddIndexers(map[string]cache.IndexFunc{
 		name: func(obj interface{}) ([]string, error) {
 			if v, ok := obj.(*v1.Secret); ok {
 				return indexer(v)
@@ -353,10 +371,9 @@ func (n *secretClient2) Index(name string, indexer SecretIndexer) {
 	}
 }
 
-func (n *secretClient2) GetIndexed(name, key string) ([]*v1.Secret, error) {
-	n.assertCache()
+func (n *secretClientCache) GetIndexed(name, key string) ([]*v1.Secret, error) {
 	var result []*v1.Secret
-	objs, err := n.controller.Informer().GetIndexer().ByIndex(name, key)
+	objs, err := n.client.controller.Informer().GetIndexer().ByIndex(name, key)
 	if err != nil {
 		return nil, err
 	}
@@ -375,16 +392,14 @@ func (n *secretClient2) loadController() {
 	}
 }
 
-func (n *secretClient2) assertCache() {
-	if n.controller == nil {
-		panic("Secret cache is not enabled, enable with SecretClient.EnableCache()")
-	}
-}
-
 type secretLifecycleDelegate struct {
 	create SecretChangeHandlerFunc
 	update SecretChangeHandlerFunc
 	remove SecretChangeHandlerFunc
+}
+
+func (n *secretLifecycleDelegate) HasCreate() bool {
+	return n.create != nil
 }
 
 func (n *secretLifecycleDelegate) Create(obj *v1.Secret) (runtime.Object, error) {
@@ -392,6 +407,10 @@ func (n *secretLifecycleDelegate) Create(obj *v1.Secret) (runtime.Object, error)
 		return obj, nil
 	}
 	return n.create(obj)
+}
+
+func (n *secretLifecycleDelegate) HasFinalize() bool {
+	return n.remove != nil
 }
 
 func (n *secretLifecycleDelegate) Remove(obj *v1.Secret) (runtime.Object, error) {

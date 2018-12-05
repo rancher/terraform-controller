@@ -1,4 +1,4 @@
-kerraform
+terraform-operator
 ========
 
 ## ***FILL THIS OUT WITH A USEFUL DESCRIPTION OF THIS REPO***
@@ -10,7 +10,7 @@ kerraform
 
 ## Running
 
-`./bin/kerraform`
+`./bin/terraform-operator`
 
 ## License
 Copyright (c) 2018 [Rancher Labs, Inc.](http://rancher.com)

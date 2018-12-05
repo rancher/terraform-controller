@@ -3,10 +3,10 @@ package execution
 import (
 	"context"
 
-	"github.com/rancher/kerraform/pkg/controllers/execution/deploy"
+	"github.com/ibuildthecloud/terraform-operator/pkg/controllers/execution/deploy"
+	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 
-	coreclient "github.com/rancher/kerraform/types/apis/core/v1"
-	"github.com/rancher/kerraform/types/apis/kerraform.cattle.io/v1"
+	coreclient "github.com/ibuildthecloud/terraform-operator/types/apis/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -14,6 +14,7 @@ func Register(ctx context.Context, ns string, coreclient coreclient.Interface, c
 	e := &executionLifecycle{}
 
 	client.Executions(ns).AddLifecycle(ctx, "execution-controller", e)
+	return nil
 }
 
 type executionLifecycle struct {

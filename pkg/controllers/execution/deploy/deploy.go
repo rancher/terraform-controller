@@ -1,9 +1,8 @@
 package deploy
 
 import (
-	"github.com/rancher/kerraform/pkg/digest"
-	"github.com/rancher/kerraform/types/apis/kerraform.cattle.io/v1"
-	"github.com/rancher/norman/pkg/apply"
+	"github.com/ibuildthecloud/terraform-operator/pkg/digest"
+	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -15,25 +14,26 @@ type Input struct {
 }
 
 func Deploy(execution *v1.Execution, input *Input) (string, error) {
-
+	return "", nil
 }
 
 func Remove(execution *v1.Execution) error {
-
+	return nil
 }
 
-func populate(execution *v1.Execution, input *Input) (*apply.Data, error) {
-	content := input.Module.Status.Content
-	contentHash := input.Module.Status.ContentHash
-	secretHash, secretData := secretData(input)
-	configData := configData(input)
-	executionRuns := executionRuns(execution, input)
+func populate(execution *v1.Execution, input *Input) error {
+	// content := input.Module.Status.Content
+	// contentHash := input.Module.Status.ContentHash
+	// secretHash, secretData := secretData(input)
+	// configData := configData(input)
+	// executionRuns := executionRuns(execution, input)
+	return nil
 
 }
 
 func executionRuns(execution *v1.Execution, input *Input) map[string]string {
 	result := map[string]string{}
-	for dataName, executionName := range execution.Spec.Data {
+	for dataName, _ := range execution.Spec.Data {
 		result[dataName] = input.Executions[dataName].Status.ExecutionRunName
 	}
 	return result

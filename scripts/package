@@ -16,9 +16,9 @@ if echo $TAG | grep -q dirty; then
     TAG=dev
 fi
 
-cp ../bin/kerraform .
+cp ../bin/terraform-operator .
 
-IMAGE=${REPO}/kerraform:${TAG}
+IMAGE=${REPO}/terraform-operator:${TAG}
 docker build -t ${IMAGE} .
 echo ${IMAGE} > ../dist/images
 echo Built ${IMAGE}

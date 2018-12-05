@@ -7,7 +7,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/rancher/kerraform/pkg/server"
+	"github.com/ibuildthecloud/terraform-operator/pkg/server"
 	"github.com/rancher/norman"
 	"github.com/rancher/norman/pkg/resolvehome"
 	"github.com/rancher/norman/signal"
@@ -21,7 +21,7 @@ var (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "kerraform"
+	app.Name = "terraform-operator"
 	app.Version = VERSION
 	app.Flags = []cli.Flag{
 		cli.StringFlag{

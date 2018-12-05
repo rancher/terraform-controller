@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	GroupName = "kerraform.cattle.io"
+	GroupName = "terraform-operator.cattle.io"
 	Version   = "v1"
 )
 
@@ -37,6 +37,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModuleList{},
 		&Execution{},
 		&ExecutionList{},
+		&ExecutionRun{},
+		&ExecutionRunList{},
 	)
 	return nil
 }

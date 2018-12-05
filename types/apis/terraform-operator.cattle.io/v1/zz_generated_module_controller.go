@@ -253,8 +253,15 @@ func (s *moduleClient) AddClusterScopedLifecycle(ctx context.Context, name, clus
 
 type ModuleIndexer func(obj *Module) ([]string, error)
 
+type ModuleClientCache interface {
+	Get(namespace, name string) (*Module, error)
+	List(namespace string, selector labels.Selector) ([]*Module, error)
+
+	Index(name string, indexer ModuleIndexer)
+	GetIndexed(name, key string) ([]*Module, error)
+}
+
 type ModuleClient interface {
-	Interface() ModuleInterface
 	Create(*Module) (*Module, error)
 	Get(namespace, name string, opts metav1.GetOptions) (*Module, error)
 	Update(*Module) (*Module, error)
@@ -262,16 +269,19 @@ type ModuleClient interface {
 	List(namespace string, opts metav1.ListOptions) (*ModuleList, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 
-	GetCached(namespace, name string) (*Module, error)
-	ListCached(namespace string, selector labels.Selector) ([]*Module, error)
-	EnableCache()
+	Cache() ModuleClientCache
 
 	OnCreate(ctx context.Context, name string, sync ModuleChangeHandlerFunc)
 	OnChange(ctx context.Context, name string, sync ModuleChangeHandlerFunc)
 	OnRemove(ctx context.Context, name string, sync ModuleChangeHandlerFunc)
+	Enqueue(namespace, name string)
 
-	Index(name string, indexer ModuleIndexer)
-	GetIndexed(name, key string) ([]*Module, error)
+	Generic() controller.GenericController
+	Interface() ModuleInterface
+}
+
+type moduleClientCache struct {
+	client *moduleClient2
 }
 
 type moduleClient2 struct {
@@ -281,6 +291,14 @@ type moduleClient2 struct {
 
 func (n *moduleClient2) Interface() ModuleInterface {
 	return n.iface
+}
+
+func (n *moduleClient2) Generic() controller.GenericController {
+	return n.iface.Controller().Generic()
+}
+
+func (n *moduleClient2) Enqueue(namespace, name string) {
+	n.iface.Controller().Enqueue(namespace, name)
 }
 
 func (n *moduleClient2) Create(obj *Module) (*Module, error) {
@@ -307,28 +325,29 @@ func (n *moduleClient2) Watch(opts metav1.ListOptions) (watch.Interface, error) 
 	return n.iface.Watch(opts)
 }
 
-func (n *moduleClient2) GetCached(namespace, name string) (*Module, error) {
-	n.assertCache()
-	return n.controller.Lister().Get(namespace, name)
+func (n *moduleClientCache) Get(namespace, name string) (*Module, error) {
+	return n.client.controller.Lister().Get(namespace, name)
 }
 
-func (n *moduleClient2) ListCached(namespace string, selector labels.Selector) ([]*Module, error) {
-	n.assertCache()
-	return n.controller.Lister().List(namespace, selector)
+func (n *moduleClientCache) List(namespace string, selector labels.Selector) ([]*Module, error) {
+	return n.client.controller.Lister().List(namespace, selector)
 }
 
-func (n *moduleClient2) EnableCache() {
+func (n *moduleClient2) Cache() ModuleClientCache {
 	n.loadController()
+	return &moduleClientCache{
+		client: n,
+	}
 }
 
 func (n *moduleClient2) OnCreate(ctx context.Context, name string, sync ModuleChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &moduleLifecycleDelegate{create: sync})
+	n.iface.AddLifecycle(ctx, name+"-create", &moduleLifecycleDelegate{create: sync})
 }
 
 func (n *moduleClient2) OnChange(ctx context.Context, name string, sync ModuleChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &moduleLifecycleDelegate{update: sync})
+	n.iface.AddLifecycle(ctx, name+"-change", &moduleLifecycleDelegate{update: sync})
 }
 
 func (n *moduleClient2) OnRemove(ctx context.Context, name string, sync ModuleChangeHandlerFunc) {
@@ -336,9 +355,8 @@ func (n *moduleClient2) OnRemove(ctx context.Context, name string, sync ModuleCh
 	n.iface.AddLifecycle(ctx, name, &moduleLifecycleDelegate{remove: sync})
 }
 
-func (n *moduleClient2) Index(name string, indexer ModuleIndexer) {
-	n.loadController()
-	err := n.controller.Informer().GetIndexer().AddIndexers(map[string]cache.IndexFunc{
+func (n *moduleClientCache) Index(name string, indexer ModuleIndexer) {
+	err := n.client.controller.Informer().GetIndexer().AddIndexers(map[string]cache.IndexFunc{
 		name: func(obj interface{}) ([]string, error) {
 			if v, ok := obj.(*Module); ok {
 				return indexer(v)
@@ -352,10 +370,9 @@ func (n *moduleClient2) Index(name string, indexer ModuleIndexer) {
 	}
 }
 
-func (n *moduleClient2) GetIndexed(name, key string) ([]*Module, error) {
-	n.assertCache()
+func (n *moduleClientCache) GetIndexed(name, key string) ([]*Module, error) {
 	var result []*Module
-	objs, err := n.controller.Informer().GetIndexer().ByIndex(name, key)
+	objs, err := n.client.controller.Informer().GetIndexer().ByIndex(name, key)
 	if err != nil {
 		return nil, err
 	}
@@ -374,16 +391,14 @@ func (n *moduleClient2) loadController() {
 	}
 }
 
-func (n *moduleClient2) assertCache() {
-	if n.controller == nil {
-		panic("Module cache is not enabled, enable with ModuleClient.EnableCache()")
-	}
-}
-
 type moduleLifecycleDelegate struct {
 	create ModuleChangeHandlerFunc
 	update ModuleChangeHandlerFunc
 	remove ModuleChangeHandlerFunc
+}
+
+func (n *moduleLifecycleDelegate) HasCreate() bool {
+	return n.create != nil
 }
 
 func (n *moduleLifecycleDelegate) Create(obj *Module) (runtime.Object, error) {
@@ -391,6 +406,10 @@ func (n *moduleLifecycleDelegate) Create(obj *Module) (runtime.Object, error) {
 		return obj, nil
 	}
 	return n.create(obj)
+}
+
+func (n *moduleLifecycleDelegate) HasFinalize() bool {
+	return n.remove != nil
 }
 
 func (n *moduleLifecycleDelegate) Remove(obj *Module) (runtime.Object, error) {

@@ -253,8 +253,15 @@ func (s *executionClient) AddClusterScopedLifecycle(ctx context.Context, name, c
 
 type ExecutionIndexer func(obj *Execution) ([]string, error)
 
+type ExecutionClientCache interface {
+	Get(namespace, name string) (*Execution, error)
+	List(namespace string, selector labels.Selector) ([]*Execution, error)
+
+	Index(name string, indexer ExecutionIndexer)
+	GetIndexed(name, key string) ([]*Execution, error)
+}
+
 type ExecutionClient interface {
-	Interface() ExecutionInterface
 	Create(*Execution) (*Execution, error)
 	Get(namespace, name string, opts metav1.GetOptions) (*Execution, error)
 	Update(*Execution) (*Execution, error)
@@ -262,16 +269,19 @@ type ExecutionClient interface {
 	List(namespace string, opts metav1.ListOptions) (*ExecutionList, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 
-	GetCached(namespace, name string) (*Execution, error)
-	ListCached(namespace string, selector labels.Selector) ([]*Execution, error)
-	EnableCache()
+	Cache() ExecutionClientCache
 
 	OnCreate(ctx context.Context, name string, sync ExecutionChangeHandlerFunc)
 	OnChange(ctx context.Context, name string, sync ExecutionChangeHandlerFunc)
 	OnRemove(ctx context.Context, name string, sync ExecutionChangeHandlerFunc)
+	Enqueue(namespace, name string)
 
-	Index(name string, indexer ExecutionIndexer)
-	GetIndexed(name, key string) ([]*Execution, error)
+	Generic() controller.GenericController
+	Interface() ExecutionInterface
+}
+
+type executionClientCache struct {
+	client *executionClient2
 }
 
 type executionClient2 struct {
@@ -281,6 +291,14 @@ type executionClient2 struct {
 
 func (n *executionClient2) Interface() ExecutionInterface {
 	return n.iface
+}
+
+func (n *executionClient2) Generic() controller.GenericController {
+	return n.iface.Controller().Generic()
+}
+
+func (n *executionClient2) Enqueue(namespace, name string) {
+	n.iface.Controller().Enqueue(namespace, name)
 }
 
 func (n *executionClient2) Create(obj *Execution) (*Execution, error) {
@@ -307,28 +325,29 @@ func (n *executionClient2) Watch(opts metav1.ListOptions) (watch.Interface, erro
 	return n.iface.Watch(opts)
 }
 
-func (n *executionClient2) GetCached(namespace, name string) (*Execution, error) {
-	n.assertCache()
-	return n.controller.Lister().Get(namespace, name)
+func (n *executionClientCache) Get(namespace, name string) (*Execution, error) {
+	return n.client.controller.Lister().Get(namespace, name)
 }
 
-func (n *executionClient2) ListCached(namespace string, selector labels.Selector) ([]*Execution, error) {
-	n.assertCache()
-	return n.controller.Lister().List(namespace, selector)
+func (n *executionClientCache) List(namespace string, selector labels.Selector) ([]*Execution, error) {
+	return n.client.controller.Lister().List(namespace, selector)
 }
 
-func (n *executionClient2) EnableCache() {
+func (n *executionClient2) Cache() ExecutionClientCache {
 	n.loadController()
+	return &executionClientCache{
+		client: n,
+	}
 }
 
 func (n *executionClient2) OnCreate(ctx context.Context, name string, sync ExecutionChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &executionLifecycleDelegate{create: sync})
+	n.iface.AddLifecycle(ctx, name+"-create", &executionLifecycleDelegate{create: sync})
 }
 
 func (n *executionClient2) OnChange(ctx context.Context, name string, sync ExecutionChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &executionLifecycleDelegate{update: sync})
+	n.iface.AddLifecycle(ctx, name+"-change", &executionLifecycleDelegate{update: sync})
 }
 
 func (n *executionClient2) OnRemove(ctx context.Context, name string, sync ExecutionChangeHandlerFunc) {
@@ -336,9 +355,8 @@ func (n *executionClient2) OnRemove(ctx context.Context, name string, sync Execu
 	n.iface.AddLifecycle(ctx, name, &executionLifecycleDelegate{remove: sync})
 }
 
-func (n *executionClient2) Index(name string, indexer ExecutionIndexer) {
-	n.loadController()
-	err := n.controller.Informer().GetIndexer().AddIndexers(map[string]cache.IndexFunc{
+func (n *executionClientCache) Index(name string, indexer ExecutionIndexer) {
+	err := n.client.controller.Informer().GetIndexer().AddIndexers(map[string]cache.IndexFunc{
 		name: func(obj interface{}) ([]string, error) {
 			if v, ok := obj.(*Execution); ok {
 				return indexer(v)
@@ -352,10 +370,9 @@ func (n *executionClient2) Index(name string, indexer ExecutionIndexer) {
 	}
 }
 
-func (n *executionClient2) GetIndexed(name, key string) ([]*Execution, error) {
-	n.assertCache()
+func (n *executionClientCache) GetIndexed(name, key string) ([]*Execution, error) {
 	var result []*Execution
-	objs, err := n.controller.Informer().GetIndexer().ByIndex(name, key)
+	objs, err := n.client.controller.Informer().GetIndexer().ByIndex(name, key)
 	if err != nil {
 		return nil, err
 	}
@@ -374,16 +391,14 @@ func (n *executionClient2) loadController() {
 	}
 }
 
-func (n *executionClient2) assertCache() {
-	if n.controller == nil {
-		panic("Execution cache is not enabled, enable with ExecutionClient.EnableCache()")
-	}
-}
-
 type executionLifecycleDelegate struct {
 	create ExecutionChangeHandlerFunc
 	update ExecutionChangeHandlerFunc
 	remove ExecutionChangeHandlerFunc
+}
+
+func (n *executionLifecycleDelegate) HasCreate() bool {
+	return n.create != nil
 }
 
 func (n *executionLifecycleDelegate) Create(obj *Execution) (runtime.Object, error) {
@@ -391,6 +406,10 @@ func (n *executionLifecycleDelegate) Create(obj *Execution) (runtime.Object, err
 		return obj, nil
 	}
 	return n.create(obj)
+}
+
+func (n *executionLifecycleDelegate) HasFinalize() bool {
+	return n.remove != nil
 }
 
 func (n *executionLifecycleDelegate) Remove(obj *Execution) (runtime.Object, error) {

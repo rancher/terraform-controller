@@ -1,3 +1,3 @@
 FROM alpine
-COPY kerraform /usr/bin/
-CMD ["kerraform"]
+COPY terraform-operator /usr/bin/
+CMD ["terraform-operator"]

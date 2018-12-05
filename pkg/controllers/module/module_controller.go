@@ -2,14 +2,15 @@ package module
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/ibuildthecloud/terraform-operator/pkg/digest"
+	"github.com/ibuildthecloud/terraform-operator/pkg/git"
+	"github.com/ibuildthecloud/terraform-operator/pkg/interval"
+	corev1client "github.com/ibuildthecloud/terraform-operator/types/apis/core/v1"
+	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/pkg/errors"
-	"github.com/rancher/kerraform/pkg/digest"
-	"github.com/rancher/kerraform/pkg/git"
-	"github.com/rancher/kerraform/pkg/interval"
-	corev1client "github.com/rancher/kerraform/types/apis/core/v1"
-	"github.com/rancher/kerraform/types/apis/kerraform.cattle.io/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -32,6 +33,7 @@ type handler struct {
 }
 
 func (h *handler) Handler(key string, obj *v1.Module) (robj runtime.Object, rerr error) {
+	fmt.Printf("%+v\n", obj)
 	if obj == nil {
 		return nil, nil
 	}
