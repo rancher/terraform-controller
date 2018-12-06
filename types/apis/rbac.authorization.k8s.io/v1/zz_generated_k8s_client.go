@@ -20,15 +20,13 @@ type Interface interface {
 	RESTClient() rest.Interface
 	controller.Starter
 
-	ConfigMapsGetter
-	SecretsGetter
-	ServiceAccountsGetter
+	ClusterRolesGetter
+	ClusterRoleBindingsGetter
 }
 
 type Clients struct {
-	ConfigMap      ConfigMapClient
-	Secret         SecretClient
-	ServiceAccount ServiceAccountClient
+	ClusterRole        ClusterRoleClient
+	ClusterRoleBinding ClusterRoleBindingClient
 }
 
 type Client struct {
@@ -36,9 +34,8 @@ type Client struct {
 	restClient rest.Interface
 	starters   []controller.Starter
 
-	configMapControllers      map[string]ConfigMapController
-	secretControllers         map[string]SecretController
-	serviceAccountControllers map[string]ServiceAccountController
+	clusterRoleControllers        map[string]ClusterRoleController
+	clusterRoleBindingControllers map[string]ClusterRoleBindingController
 }
 
 func Factory(ctx context.Context, config rest.Config) (context.Context, controller.Starter, error) {
@@ -73,14 +70,11 @@ func NewClients(config rest.Config) (*Clients, error) {
 func NewClientsFromInterface(iface Interface) *Clients {
 	return &Clients{
 
-		ConfigMap: &configMapClient2{
-			iface: iface.ConfigMaps(""),
+		ClusterRole: &clusterRoleClient2{
+			iface: iface.ClusterRoles(""),
 		},
-		Secret: &secretClient2{
-			iface: iface.Secrets(""),
-		},
-		ServiceAccount: &serviceAccountClient2{
-			iface: iface.ServiceAccounts(""),
+		ClusterRoleBinding: &clusterRoleBindingClient2{
+			iface: iface.ClusterRoleBindings(""),
 		},
 	}
 }
@@ -98,9 +92,8 @@ func NewForConfig(config rest.Config) (Interface, error) {
 	return &Client{
 		restClient: restClient,
 
-		configMapControllers:      map[string]ConfigMapController{},
-		secretControllers:         map[string]SecretController{},
-		serviceAccountControllers: map[string]ServiceAccountController{},
+		clusterRoleControllers:        map[string]ClusterRoleController{},
+		clusterRoleBindingControllers: map[string]ClusterRoleBindingController{},
 	}, nil
 }
 
@@ -116,39 +109,26 @@ func (c *Client) Start(ctx context.Context, threadiness int) error {
 	return controller.Start(ctx, threadiness, c.starters...)
 }
 
-type ConfigMapsGetter interface {
-	ConfigMaps(namespace string) ConfigMapInterface
+type ClusterRolesGetter interface {
+	ClusterRoles(namespace string) ClusterRoleInterface
 }
 
-func (c *Client) ConfigMaps(namespace string) ConfigMapInterface {
-	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &ConfigMapResource, ConfigMapGroupVersionKind, configMapFactory{})
-	return &configMapClient{
+func (c *Client) ClusterRoles(namespace string) ClusterRoleInterface {
+	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &ClusterRoleResource, ClusterRoleGroupVersionKind, clusterRoleFactory{})
+	return &clusterRoleClient{
 		ns:           namespace,
 		client:       c,
 		objectClient: objectClient,
 	}
 }
 
-type SecretsGetter interface {
-	Secrets(namespace string) SecretInterface
+type ClusterRoleBindingsGetter interface {
+	ClusterRoleBindings(namespace string) ClusterRoleBindingInterface
 }
 
-func (c *Client) Secrets(namespace string) SecretInterface {
-	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &SecretResource, SecretGroupVersionKind, secretFactory{})
-	return &secretClient{
-		ns:           namespace,
-		client:       c,
-		objectClient: objectClient,
-	}
-}
-
-type ServiceAccountsGetter interface {
-	ServiceAccounts(namespace string) ServiceAccountInterface
-}
-
-func (c *Client) ServiceAccounts(namespace string) ServiceAccountInterface {
-	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &ServiceAccountResource, ServiceAccountGroupVersionKind, serviceAccountFactory{})
-	return &serviceAccountClient{
+func (c *Client) ClusterRoleBindings(namespace string) ClusterRoleBindingInterface {
+	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &ClusterRoleBindingResource, ClusterRoleBindingGroupVersionKind, clusterRoleBindingFactory{})
+	return &clusterRoleBindingClient{
 		ns:           namespace,
 		client:       c,
 		objectClient: objectClient,
