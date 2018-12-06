@@ -2,12 +2,12 @@ package module
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ibuildthecloud/terraform-operator/pkg/digest"
 	"github.com/ibuildthecloud/terraform-operator/pkg/git"
 	"github.com/ibuildthecloud/terraform-operator/pkg/interval"
+	"github.com/ibuildthecloud/terraform-operator/types/apis/client"
 	corev1client "github.com/ibuildthecloud/terraform-operator/types/apis/core/v1"
 	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/pkg/errors"
@@ -15,14 +15,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func Register(ctx context.Context, ns string, client v1.Interface, k8sClient corev1client.Interface) error {
+func Register(ctx context.Context, ns string, client *client.MasterClient) error {
 	fl := &handler{
 		ctx:           ctx,
-		modules:       client.Modules(""),
-		secretsLister: k8sClient.Secrets("").Controller().Lister(),
+		modules:       client.Operator.Modules(""),
+		secretsLister: client.Core.Secrets("").Controller().Lister(),
 	}
 
-	client.Modules(ns).AddHandler(ctx, "module controller", fl.Handler)
+	client.Operator.Modules(ns).AddHandler(ctx, "module controller", fl.Handler)
 	return nil
 }
 
@@ -33,7 +33,6 @@ type handler struct {
 }
 
 func (h *handler) Handler(key string, obj *v1.Module) (robj runtime.Object, rerr error) {
-	fmt.Printf("%+v\n", obj)
 	if obj == nil {
 		return nil, nil
 	}

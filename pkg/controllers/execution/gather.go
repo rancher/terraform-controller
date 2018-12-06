@@ -1,22 +1,24 @@
 package execution
 
 import (
-	"github.com/ibuildthecloud/terraform-operator/pkg/controllers/execution/deploy"
+	"fmt"
+
 	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8sError "k8s.io/apimachinery/pkg/api/errors"
 )
 
-func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*deploy.Input, bool, error) {
+func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error) {
 	var (
 		ns   = obj.Namespace
 		spec = obj.Spec
 	)
 
 	mod, err := e.moduleLister.Get(ns, spec.ModuleName)
-	if errors.IsNotFound(err) {
-		return nil, false, nil
-	} else if err != nil {
+	if err != nil {
+		if k8sError.IsNotFound(err) {
+			return nil, false, nil
+		}
 		return nil, false, err
 	}
 
@@ -39,7 +41,7 @@ func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*deploy.Input, bool
 		return nil, false, err
 	}
 
-	return &deploy.Input{
+	return &Input{
 		Module:     mod,
 		Executions: executions,
 		Configs:    configs,
@@ -52,7 +54,7 @@ func (e *executionLifecycle) getSecrets(ns string, spec v1.ExecutionSpec) ([]*co
 
 	for _, name := range spec.Variables.SecretNames {
 		secret, err := e.secretsLister.Get(ns, name)
-		if errors.IsNotFound(err) {
+		if k8sError.IsNotFound(err) {
 			return secrets, false, nil
 		} else if err != nil {
 			return secrets, false, err
@@ -69,7 +71,7 @@ func (e *executionLifecycle) getConfigs(ns string, spec v1.ExecutionSpec) ([]*co
 
 	for _, name := range spec.Variables.SecretNames {
 		configMap, err := e.configMapLister.Get(ns, name)
-		if errors.IsNotFound(err) {
+		if k8sError.IsNotFound(err) {
 			return configMaps, false, nil
 		} else if err != nil {
 			return configMaps, false, err
@@ -81,21 +83,28 @@ func (e *executionLifecycle) getConfigs(ns string, spec v1.ExecutionSpec) ([]*co
 	return configMaps, true, nil
 }
 
-func (e *executionLifecycle) getExecutions(ns string, spec v1.ExecutionSpec) (map[string]*v1.Execution, bool, error) {
-	result := map[string]*v1.Execution{}
+func (e *executionLifecycle) getExecutions(ns string, spec v1.ExecutionSpec) (map[string]string, bool, error) {
+	result := map[string]string{}
 	for dataName, execName := range spec.Data {
 		execution, err := e.executionLister.Get(ns, execName)
-		if errors.IsNotFound(err) {
+		if k8sError.IsNotFound(err) {
 			return result, false, nil
 		} else if err != nil {
 			return result, false, err
 		}
 
 		if execution.Status.ExecutionRunName == "" {
-			return result, false, nil
+			return result, false, fmt.Errorf("referenced execution %v does not have any runs", execName)
 		}
 
-		result[dataName] = execution
+		execRun, err := e.executionRunLister.Get(ns, execution.Status.ExecutionRunName)
+		if k8sError.IsNotFound(err) {
+			return result, false, nil
+		} else if err != nil {
+			return result, false, err
+		}
+
+		result[dataName] = execRun.Status.Outputs[dataName]
 	}
 
 	return result, true, nil

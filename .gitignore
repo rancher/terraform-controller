@@ -4,3 +4,4 @@
 /bin
 /dist
 *.swp
+/terraform-operator
