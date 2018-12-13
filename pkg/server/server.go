@@ -3,17 +3,20 @@ package server
 import (
 	"context"
 
-	"github.com/rancher/kerraform/pkg/controllers/module"
-	corev1 "github.com/rancher/kerraform/types/apis/core/v1"
-	corev1client "github.com/rancher/kerraform/types/apis/core/v1"
-	"github.com/rancher/kerraform/types/apis/kerraform.cattle.io/v1"
+	"github.com/ibuildthecloud/terraform-operator/pkg/controllers/execution"
+	"github.com/ibuildthecloud/terraform-operator/pkg/controllers/module"
+	batchv1 "github.com/ibuildthecloud/terraform-operator/types/apis/batch/v1"
+	"github.com/ibuildthecloud/terraform-operator/types/apis/client"
+	corev1 "github.com/ibuildthecloud/terraform-operator/types/apis/core/v1"
+	rbacv1 "github.com/ibuildthecloud/terraform-operator/types/apis/rbac.authorization.k8s.io/v1"
+	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/rancher/norman"
 	"github.com/rancher/norman/types"
 )
 
 func Config(ns string) *norman.Config {
 	return &norman.Config{
-		Name: "kerraform",
+		Name: "terraform-operator",
 		Schemas: []*types.Schemas{
 			v1.Schemas,
 		},
@@ -21,20 +24,29 @@ func Config(ns string) *norman.Config {
 		CRDs: map[*types.APIVersion][]string{
 			&v1.APIVersion: {
 				v1.ModuleGroupVersionKind.Kind,
+				v1.ExecutionGroupVersionKind.Kind,
+				v1.ExecutionRunGroupVersionKind.Kind,
 			},
 		},
 
 		Clients: []norman.ClientFactory{
 			v1.Factory,
+			batchv1.Factory,
 			corev1.Factory,
+			rbacv1.Factory,
 		},
 
 		LeaderLockNamespace: ns,
 
+		GlobalSetup: client.BuildContext,
+
 		MasterControllers: []norman.ControllerRegister{
-			func(ctx context.Context) error {
-				return module.Register(ctx, ns, v1.From(ctx), corev1client.From(ctx))
-			},
+			client.Register(func(ctx context.Context, client *client.MasterClient) error {
+				return module.Register(ctx, ns, client)
+			}),
+			client.Register(func(ctx context.Context, client *client.MasterClient) error {
+				return execution.Register(ctx, ns, client)
+			}),
 		},
 	}
 }

@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	GroupName = ""
+	GroupName = "rbac.authorization.k8s.io"
 	Version   = "v1"
 )
 
@@ -33,9 +33,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	// TODO this gets cleaned up when the types are fixed
 	scheme.AddKnownTypes(SchemeGroupVersion,
 
-		&ConfigMapList{},
-		&SecretList{},
-		&ServiceAccountList{},
+		&ClusterRoleList{},
+		&ClusterRoleBindingList{},
 	)
 	return nil
 }

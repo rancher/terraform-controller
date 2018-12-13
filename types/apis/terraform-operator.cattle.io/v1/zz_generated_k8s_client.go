@@ -22,11 +22,13 @@ type Interface interface {
 
 	ModulesGetter
 	ExecutionsGetter
+	ExecutionRunsGetter
 }
 
 type Clients struct {
-	Module    ModuleClient
-	Execution ExecutionClient
+	Module       ModuleClient
+	Execution    ExecutionClient
+	ExecutionRun ExecutionRunClient
 }
 
 type Client struct {
@@ -34,8 +36,9 @@ type Client struct {
 	restClient rest.Interface
 	starters   []controller.Starter
 
-	moduleControllers    map[string]ModuleController
-	executionControllers map[string]ExecutionController
+	moduleControllers       map[string]ModuleController
+	executionControllers    map[string]ExecutionController
+	executionRunControllers map[string]ExecutionRunController
 }
 
 func Factory(ctx context.Context, config rest.Config) (context.Context, controller.Starter, error) {
@@ -76,6 +79,9 @@ func NewClientsFromInterface(iface Interface) *Clients {
 		Execution: &executionClient2{
 			iface: iface.Executions(""),
 		},
+		ExecutionRun: &executionRunClient2{
+			iface: iface.ExecutionRuns(""),
+		},
 	}
 }
 
@@ -92,8 +98,9 @@ func NewForConfig(config rest.Config) (Interface, error) {
 	return &Client{
 		restClient: restClient,
 
-		moduleControllers:    map[string]ModuleController{},
-		executionControllers: map[string]ExecutionController{},
+		moduleControllers:       map[string]ModuleController{},
+		executionControllers:    map[string]ExecutionController{},
+		executionRunControllers: map[string]ExecutionRunController{},
 	}, nil
 }
 
@@ -129,6 +136,19 @@ type ExecutionsGetter interface {
 func (c *Client) Executions(namespace string) ExecutionInterface {
 	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &ExecutionResource, ExecutionGroupVersionKind, executionFactory{})
 	return &executionClient{
+		ns:           namespace,
+		client:       c,
+		objectClient: objectClient,
+	}
+}
+
+type ExecutionRunsGetter interface {
+	ExecutionRuns(namespace string) ExecutionRunInterface
+}
+
+func (c *Client) ExecutionRuns(namespace string) ExecutionRunInterface {
+	objectClient := objectclient.NewObjectClient(namespace, c.restClient, &ExecutionRunResource, ExecutionRunGroupVersionKind, executionRunFactory{})
+	return &executionRunClient{
 		ns:           namespace,
 		client:       c,
 		objectClient: objectClient,

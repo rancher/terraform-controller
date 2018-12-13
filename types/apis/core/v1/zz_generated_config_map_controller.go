@@ -64,7 +64,7 @@ type ConfigMapInterface interface {
 	Update(*v1.ConfigMap) (*v1.ConfigMap, error)
 	Delete(name string, options *metav1.DeleteOptions) error
 	DeleteNamespaced(namespace, name string, options *metav1.DeleteOptions) error
-	List(opts metav1.ListOptions) (*v1.ConfigMapList, error)
+	List(opts metav1.ListOptions) (*ConfigMapList, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 	DeleteCollection(deleteOpts *metav1.DeleteOptions, listOpts metav1.ListOptions) error
 	Controller() ConfigMapController
@@ -215,9 +215,9 @@ func (s *configMapClient) DeleteNamespaced(namespace, name string, options *meta
 	return s.objectClient.DeleteNamespaced(namespace, name, options)
 }
 
-func (s *configMapClient) List(opts metav1.ListOptions) (*v1.ConfigMapList, error) {
+func (s *configMapClient) List(opts metav1.ListOptions) (*ConfigMapList, error) {
 	obj, err := s.objectClient.List(opts)
-	return obj.(*v1.ConfigMapList), err
+	return obj.(*ConfigMapList), err
 }
 
 func (s *configMapClient) Watch(opts metav1.ListOptions) (watch.Interface, error) {
@@ -254,25 +254,35 @@ func (s *configMapClient) AddClusterScopedLifecycle(ctx context.Context, name, c
 
 type ConfigMapIndexer func(obj *v1.ConfigMap) ([]string, error)
 
+type ConfigMapClientCache interface {
+	Get(namespace, name string) (*v1.ConfigMap, error)
+	List(namespace string, selector labels.Selector) ([]*v1.ConfigMap, error)
+
+	Index(name string, indexer ConfigMapIndexer)
+	GetIndexed(name, key string) ([]*v1.ConfigMap, error)
+}
+
 type ConfigMapClient interface {
-	Interface() ConfigMapInterface
 	Create(*v1.ConfigMap) (*v1.ConfigMap, error)
 	Get(namespace, name string, opts metav1.GetOptions) (*v1.ConfigMap, error)
 	Update(*v1.ConfigMap) (*v1.ConfigMap, error)
 	Delete(namespace, name string, options *metav1.DeleteOptions) error
-	List(namespace string, opts metav1.ListOptions) (*v1.ConfigMapList, error)
+	List(namespace string, opts metav1.ListOptions) (*ConfigMapList, error)
 	Watch(opts metav1.ListOptions) (watch.Interface, error)
 
-	GetCached(namespace, name string) (*v1.ConfigMap, error)
-	ListCached(namespace string, selector labels.Selector) ([]*v1.ConfigMap, error)
-	EnableCache()
+	Cache() ConfigMapClientCache
 
 	OnCreate(ctx context.Context, name string, sync ConfigMapChangeHandlerFunc)
 	OnChange(ctx context.Context, name string, sync ConfigMapChangeHandlerFunc)
 	OnRemove(ctx context.Context, name string, sync ConfigMapChangeHandlerFunc)
+	Enqueue(namespace, name string)
 
-	Index(name string, indexer ConfigMapIndexer)
-	GetIndexed(name, key string) ([]*v1.ConfigMap, error)
+	Generic() controller.GenericController
+	Interface() ConfigMapInterface
+}
+
+type configMapClientCache struct {
+	client *configMapClient2
 }
 
 type configMapClient2 struct {
@@ -282,6 +292,14 @@ type configMapClient2 struct {
 
 func (n *configMapClient2) Interface() ConfigMapInterface {
 	return n.iface
+}
+
+func (n *configMapClient2) Generic() controller.GenericController {
+	return n.iface.Controller().Generic()
+}
+
+func (n *configMapClient2) Enqueue(namespace, name string) {
+	n.iface.Controller().Enqueue(namespace, name)
 }
 
 func (n *configMapClient2) Create(obj *v1.ConfigMap) (*v1.ConfigMap, error) {
@@ -300,7 +318,7 @@ func (n *configMapClient2) Delete(namespace, name string, options *metav1.Delete
 	return n.iface.DeleteNamespaced(namespace, name, options)
 }
 
-func (n *configMapClient2) List(namespace string, opts metav1.ListOptions) (*v1.ConfigMapList, error) {
+func (n *configMapClient2) List(namespace string, opts metav1.ListOptions) (*ConfigMapList, error) {
 	return n.iface.List(opts)
 }
 
@@ -308,28 +326,29 @@ func (n *configMapClient2) Watch(opts metav1.ListOptions) (watch.Interface, erro
 	return n.iface.Watch(opts)
 }
 
-func (n *configMapClient2) GetCached(namespace, name string) (*v1.ConfigMap, error) {
-	n.assertCache()
-	return n.controller.Lister().Get(namespace, name)
+func (n *configMapClientCache) Get(namespace, name string) (*v1.ConfigMap, error) {
+	return n.client.controller.Lister().Get(namespace, name)
 }
 
-func (n *configMapClient2) ListCached(namespace string, selector labels.Selector) ([]*v1.ConfigMap, error) {
-	n.assertCache()
-	return n.controller.Lister().List(namespace, selector)
+func (n *configMapClientCache) List(namespace string, selector labels.Selector) ([]*v1.ConfigMap, error) {
+	return n.client.controller.Lister().List(namespace, selector)
 }
 
-func (n *configMapClient2) EnableCache() {
+func (n *configMapClient2) Cache() ConfigMapClientCache {
 	n.loadController()
+	return &configMapClientCache{
+		client: n,
+	}
 }
 
 func (n *configMapClient2) OnCreate(ctx context.Context, name string, sync ConfigMapChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &configMapLifecycleDelegate{create: sync})
+	n.iface.AddLifecycle(ctx, name+"-create", &configMapLifecycleDelegate{create: sync})
 }
 
 func (n *configMapClient2) OnChange(ctx context.Context, name string, sync ConfigMapChangeHandlerFunc) {
 	n.loadController()
-	n.iface.AddLifecycle(ctx, name, &configMapLifecycleDelegate{update: sync})
+	n.iface.AddLifecycle(ctx, name+"-change", &configMapLifecycleDelegate{update: sync})
 }
 
 func (n *configMapClient2) OnRemove(ctx context.Context, name string, sync ConfigMapChangeHandlerFunc) {
@@ -337,9 +356,8 @@ func (n *configMapClient2) OnRemove(ctx context.Context, name string, sync Confi
 	n.iface.AddLifecycle(ctx, name, &configMapLifecycleDelegate{remove: sync})
 }
 
-func (n *configMapClient2) Index(name string, indexer ConfigMapIndexer) {
-	n.loadController()
-	err := n.controller.Informer().GetIndexer().AddIndexers(map[string]cache.IndexFunc{
+func (n *configMapClientCache) Index(name string, indexer ConfigMapIndexer) {
+	err := n.client.controller.Informer().GetIndexer().AddIndexers(map[string]cache.IndexFunc{
 		name: func(obj interface{}) ([]string, error) {
 			if v, ok := obj.(*v1.ConfigMap); ok {
 				return indexer(v)
@@ -353,10 +371,9 @@ func (n *configMapClient2) Index(name string, indexer ConfigMapIndexer) {
 	}
 }
 
-func (n *configMapClient2) GetIndexed(name, key string) ([]*v1.ConfigMap, error) {
-	n.assertCache()
+func (n *configMapClientCache) GetIndexed(name, key string) ([]*v1.ConfigMap, error) {
 	var result []*v1.ConfigMap
-	objs, err := n.controller.Informer().GetIndexer().ByIndex(name, key)
+	objs, err := n.client.controller.Informer().GetIndexer().ByIndex(name, key)
 	if err != nil {
 		return nil, err
 	}
@@ -375,16 +392,14 @@ func (n *configMapClient2) loadController() {
 	}
 }
 
-func (n *configMapClient2) assertCache() {
-	if n.controller == nil {
-		panic("ConfigMap cache is not enabled, enable with ConfigMapClient.EnableCache()")
-	}
-}
-
 type configMapLifecycleDelegate struct {
 	create ConfigMapChangeHandlerFunc
 	update ConfigMapChangeHandlerFunc
 	remove ConfigMapChangeHandlerFunc
+}
+
+func (n *configMapLifecycleDelegate) HasCreate() bool {
+	return n.create != nil
 }
 
 func (n *configMapLifecycleDelegate) Create(obj *v1.ConfigMap) (runtime.Object, error) {
@@ -392,6 +407,10 @@ func (n *configMapLifecycleDelegate) Create(obj *v1.ConfigMap) (runtime.Object, 
 		return obj, nil
 	}
 	return n.create(obj)
+}
+
+func (n *configMapLifecycleDelegate) HasFinalize() bool {
+	return n.remove != nil
 }
 
 func (n *configMapLifecycleDelegate) Remove(obj *v1.ConfigMap) (runtime.Object, error) {

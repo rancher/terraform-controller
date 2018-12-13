@@ -9,14 +9,15 @@ import (
 
 var (
 	APIVersion = types.APIVersion{
-		Group:   "kerraform.cattle.io",
+		Group:   "terraform-operator.cattle.io",
 		Version: "v1",
-		Path:    "/v1-kerraform",
+		Path:    "/v1-terraform-operator",
 	}
 	Schemas = factory.
 		Schemas(&APIVersion).
 		MustImport(&APIVersion, Module{}).
-		MustImport(&APIVersion, Execution{})
+		MustImport(&APIVersion, Execution{}).
+		MustImport(&APIVersion, ExecutionRun{})
 
 	ModuleConditionGitUpdated = condition.Cond("GitUpdated")
 
@@ -58,7 +59,7 @@ type GitLocation struct {
 	Branch          string `json:"branch,omitempty"`
 	Tag             string `json:"tag,omitempty"`
 	Commit          string `json:"commit,omitempty"`
-	SecretName      string `json:"sshSecretName,omitempty"`
+	SecretName      string `json:"secretName,omitempty"`
 	IntervalSeconds int    `json:"intervalSeconds,omitempty"`
 }
 
@@ -78,14 +79,18 @@ type Variables struct {
 }
 
 type ExecutionSpec struct {
-	Variables   Variables         `json:"variables,omitempty"`
-	ModuleName  string            `json:"moduleName,omitempty"`
+	Variables  Variables `json:"variables,omitempty"`
+	ModuleName string    `json:"moduleName,omitempty"`
+	// Data is dataName mapped to another executionRun name
+	// so terraform variable name that should be an output from the run
 	Data        map[string]string `json:"data,omitempty"`
 	AutoConfirm bool              `json:"autoConfirm,omitempty"`
+	Version     int32             `json:"version,omitempty"`
 }
 
 type ExecutionStatus struct {
-	ExecutionRunName string `json:"executionRunName,omitempty"`
+	Conditions       []condition.GenericCondition `json:"conditions,omitempty"`
+	ExecutionRunName string                       `json:"executionRunName,omitempty"`
 }
 
 type ExecutionRun struct {
@@ -99,12 +104,14 @@ type ExecutionRun struct {
 }
 
 type ExecutionRunSpec struct {
-	ExecutionName string            `json:"executionName,omitempty"`
-	AutoConfirm   bool              `json:"autoConfirm,omitempty"`
-	SecretName    string            `json:"secretName,omitempty"`
-	ConfigMapName string            `json:"configMapName,omitempty"`
-	Content       ModuleContent     `json:"content,omitempty"`
-	Data          map[string]string `json:"data,omitempty"`
+	ExecutionName string `json:"executionName,omitempty"`
+	AutoConfirm   bool   `json:"autoConfirm,omitempty"`
+	// Secrets and config maps referenced in the Execution spec will be combined into this secret
+	SecretName       string            `json:"secretName,omitempty"`
+	Content          ModuleContent     `json:"content,omitempty"`
+	ContentHash      string            `json:"contentHash,omitempty"`
+	Data             map[string]string `json:"data,omitempty"`
+	ExecutionVersion int32             `json:"executionVersion,omitempty"`
 }
 
 type ExecutionRunStatus struct {
@@ -112,5 +119,6 @@ type ExecutionRunStatus struct {
 	JobName       string                       `json:"jobName,omitempty"`
 	PlanOutput    string                       `json:"planOutput,omitempty"`
 	PlanConfirmed bool                         `json:"planConfirmed,omitempty"`
-	ApplyOutput   string                       `json:"planOutput,omitempty"`
+	ApplyOutput   string                       `json:"applyOutput,omitempty"`
+	Outputs       map[string]string            `json:"outputs,omitempty"`
 }

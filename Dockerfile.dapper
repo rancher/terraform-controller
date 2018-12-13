@@ -12,7 +12,7 @@ RUN go get -d github.com/alecthomas/gometalinter && \
     rm -rf /go/src /go/pkg
 
 ENV DAPPER_ENV REPO TAG DRONE_TAG
-ENV DAPPER_SOURCE /go/src/github.com/rancher/kerraform/
+ENV DAPPER_SOURCE /go/src/github.com/ibuildthecloud/terraform-operator/
 ENV DAPPER_OUTPUT ./bin ./dist
 ENV DAPPER_DOCKER_SOCKET true
 ENV HOME ${DAPPER_SOURCE}
