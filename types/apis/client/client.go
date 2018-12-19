@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type clientKey struct{}
+var clientKey struct{}
 
 type MasterClient struct {
 	Batch       batchv1.Interface
@@ -24,11 +24,11 @@ type MasterClient struct {
 }
 
 func Store(ctx context.Context, c *MasterClient) context.Context {
-	return context.WithValue(ctx, clientKey{}, c)
+	return context.WithValue(ctx, clientKey, c)
 }
 
 func From(ctx context.Context) *MasterClient {
-	return ctx.Value(clientKey{}).(*MasterClient)
+	return ctx.Value(clientKey).(*MasterClient)
 }
 
 func NewContext(ctx context.Context) *MasterClient {
