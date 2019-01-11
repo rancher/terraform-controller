@@ -104,14 +104,14 @@ type ExecutionRun struct {
 }
 
 type ExecutionRunSpec struct {
-	ExecutionName string `json:"executionName,omitempty"`
-	AutoConfirm   bool   `json:"autoConfirm,omitempty"`
-	// Secrets and config maps referenced in the Execution spec will be combined into this secret
-	SecretName       string            `json:"secretName,omitempty"`
+	AutoConfirm      bool              `json:"autoConfirm,omitempty"`
 	Content          ModuleContent     `json:"content,omitempty"`
 	ContentHash      string            `json:"contentHash,omitempty"`
 	Data             map[string]string `json:"data,omitempty"`
+	ExecutionName    string            `json:"executionName,omitempty"`
 	ExecutionVersion int32             `json:"executionVersion,omitempty"`
+	// Secrets and config maps referenced in the Execution spec will be combined into this secret
+	SecretName string `json:"secretName,omitempty"`
 }
 
 type ExecutionRunStatus struct {
@@ -120,5 +120,5 @@ type ExecutionRunStatus struct {
 	PlanOutput    string                       `json:"planOutput,omitempty"`
 	PlanConfirmed bool                         `json:"planConfirmed,omitempty"`
 	ApplyOutput   string                       `json:"applyOutput,omitempty"`
-	Outputs       map[string]string            `json:"outputs,omitempty"`
+	Outputs       string                       `json:"outputs,omitempty"`
 }
