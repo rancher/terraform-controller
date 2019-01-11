@@ -97,14 +97,7 @@ func (e *executionLifecycle) getExecutions(ns string, spec v1.ExecutionSpec) (ma
 			return result, false, fmt.Errorf("referenced execution %v does not have any runs", execName)
 		}
 
-		execRun, err := e.executionRunLister.Get(ns, execution.Status.ExecutionRunName)
-		if k8sError.IsNotFound(err) {
-			return result, false, nil
-		} else if err != nil {
-			return result, false, err
-		}
-
-		result[dataName] = execRun.Status.Outputs[dataName]
+		result[dataName] = execution.Status.ExecutionRunName
 	}
 
 	return result, true, nil

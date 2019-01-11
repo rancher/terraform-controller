@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"os"
+	"time"
 
 	"github.com/ibuildthecloud/terraform-operator/pkg/executor/runner"
+	"github.com/ibuildthecloud/terraform-operator/pkg/git"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func main() {
@@ -22,9 +27,22 @@ func main() {
 }
 
 func run() error {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return err
+	var config *rest.Config
+	var err error
+
+	// Useful for running executor locally without having to deploy to k8s
+	if path := os.Getenv("KUBECONFIG"); path != "" {
+		logrus.Info(path)
+
+		config, err = clientcmd.BuildConfigFromFlags("", path)
+		if err != nil {
+			return err
+		}
+	} else {
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			return err
+		}
 	}
 
 	runner, err := runner.NewRunner(config)
@@ -36,6 +54,58 @@ func run() error {
 	if err != nil {
 		return err
 	}
+
+	auth, err := git.FromSecret(runner.GitSecret.Data)
+	if err != nil {
+		return err
+	}
+
+	err = git.CloneRepo(context.Background(), runner.ExecutionRun.Spec.Content.Git.URL, runner.ExecutionRun.Spec.Content.Git.Commit, &auth)
+	if err != nil {
+		return err
+	}
+
+	err = runner.WriteConfigFile()
+	if err != nil {
+		return err
+	}
+
+	err = runner.WriteVarFile()
+	if err != nil {
+		return err
+	}
+
+	out, err := runner.TerraformInit()
+	if err != nil {
+		return err
+	}
+
+	logrus.Info(out)
+
+	switch runner.Action {
+	case "create":
+		out, err = runner.Create()
+		if err != nil {
+			return err
+		}
+		logrus.Info(out)
+
+		err = runner.SaveOutputs()
+		if err != nil {
+			return err
+		}
+	case "destroy":
+		out, err = runner.Destroy()
+		if err != nil {
+			return err
+		}
+		logrus.Info(out)
+	default:
+		return errors.New("action is not valid, ony 'create' or 'destroy' allowed")
+	}
+
+	//TODO: delete this
+	time.Sleep(1 * time.Hour)
 
 	return nil
 }

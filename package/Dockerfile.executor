@@ -7,6 +7,9 @@ RUN curl -sLf https://releases.hashicorp.com/terraform/0.11.11/terraform_0.11.11
     unzip terraform_0.11.11_linux_amd64.zip -d /usr/bin && \
     chmod +x /usr/bin/terraform && \
     rm terraform_0.11.11_linux_amd64.zip
+RUN mkdir -p /root/module
 
 COPY terraform-executor /usr/bin/
+
+WORKDIR /root/module
 CMD ["terraform-executor"]

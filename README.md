@@ -12,6 +12,9 @@ terraform-operator
 
 `./bin/terraform-operator`
 
+## Running the Executor in Docker
+docker run -d -v "/Path/To/Kubeconfig:/root/.kube/config" -e "KUBECONFIG=/root/.kube/config" -e "EXECUTOR_RUN_NAME=RUN_NAME" -e "EXECUTOR_ACTION=create" rancher/terraform-executor:dev
+
 ## License
 Copyright (c) 2018 [Rancher Labs, Inc.](http://rancher.com)
 

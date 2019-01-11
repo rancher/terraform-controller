@@ -49,6 +49,9 @@ func FromSecret(secret map[string][]byte) (Auth, error) {
 func (a Auth) Populate(url string) (string, []string, func()) {
 	url = a.Basic.populate(url)
 	env, close := a.SSH.populate()
+	if len(env) == 0 {
+		env = []string{"GIT_SSH_COMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"}
+	}
 	return url, env, close
 }
 
@@ -110,6 +113,6 @@ func (s SSH) populate() ([]string, func()) {
 	}
 
 	return []string{
-		fmt.Sprintf("GIT_SSH_COMAND=ssh -i %s", f.Name()),
+		fmt.Sprintf("GIT_SSH_COMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i %s", f.Name()),
 	}, close
 }

@@ -173,7 +173,7 @@ func (e *executionLifecycle) createExecutionRun(
 		Spec: v1.ExecutionRunSpec{
 			ExecutionName:    execution.Name,
 			AutoConfirm:      execution.Spec.AutoConfirm,
-			SecretName:       name,
+			SecretName:       "s-" + name,
 			Content:          input.Module.Spec.ModuleContent,
 			ContentHash:      input.Module.Status.ContentHash,
 			ExecutionVersion: execution.Spec.Version,
@@ -232,7 +232,7 @@ func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, runName, acti
 						coreV1.Container{
 							Name: "agent",
 							// TODO: Need image name, this just gets the job running
-							Image: "nginx",
+							Image: "dramich/terraform-executor:dev",
 							Env: []coreV1.EnvVar{
 								coreV1.EnvVar{
 									Name:  "TF_IN_AUTOMATION",
@@ -245,10 +245,6 @@ func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, runName, acti
 								coreV1.EnvVar{
 									Name:  "EXECUTOR_RUN_NAME",
 									Value: runName,
-								},
-								coreV1.EnvVar{
-									Name:  "EXECUTOR_NAMESPACE",
-									Value: namespace,
 								},
 							},
 							ImagePullPolicy: coreV1.PullAlways,
@@ -435,10 +431,6 @@ func combineVars(input *Input) map[string]string {
 		for k, v := range secret.Data {
 			vars[k] = string(v)
 		}
-	}
-
-	for k, v := range input.Executions {
-		vars[k] = v
 	}
 
 	return vars
