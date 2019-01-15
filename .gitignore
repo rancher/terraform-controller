@@ -5,3 +5,4 @@
 /dist
 *.swp
 /terraform-operator
+pkg/executor/executor

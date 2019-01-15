@@ -10,6 +10,7 @@ import (
 
 	"github.com/ibuildthecloud/terraform-operator/pkg/executor/terraform"
 	"github.com/ibuildthecloud/terraform-operator/pkg/executor/writer"
+	"github.com/ibuildthecloud/terraform-operator/pkg/git"
 	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/sirupsen/logrus"
 	coreV1 "k8s.io/api/core/v1"
@@ -20,15 +21,16 @@ import (
 )
 
 const (
-	approvalMessage = `autoConfirm is not set, and the annotation 'approved' is empty, 
+	approvalMessage = `autoConfirm is not set, and the annotation 'approved' is empty,
 please review the plan and set the annotation 'approved' to 'yes' if approved
 or 'no' if not approved. If set to 'no' the job will exit without making any changes.`
 )
 
 type Runner struct {
 	Action       string
+	Namespace    string
 	ExecutionRun *v1.ExecutionRun
-	GitSecret    *coreV1.Secret
+	GitAuth      *git.Auth
 	K8sClient    *kubernetes.Clientset
 	OpClient     *v1.Clients
 	VarSecret    *coreV1.Secret
@@ -43,13 +45,12 @@ func NewRunner(config *rest.Config) (*Runner, error) {
 	}
 
 	r.K8sClient = client
-
-	opClient, err := v1.NewClients(*config)
+	opClient, err := v1.NewForConfig(*config)
 	if err != nil {
 		return nil, err
 	}
 
-	r.OpClient = opClient
+	r.OpClient = v1.NewClientsFromInterface(opClient)
 
 	return &r, nil
 }
@@ -67,8 +68,12 @@ func (r *Runner) Create() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	fmt.Println(out)
 	logrus.Info(out)
+	err = r.SetExecutionRunStatus("planned")
+	if err != nil {
+		return "", err
+	}
 
 	// We have autoConfirm, run apply
 	if r.ExecutionRun.Spec.AutoConfirm {
@@ -87,7 +92,7 @@ func (r *Runner) Create() (string, error) {
 
 	switch strings.ToLower(approval) {
 	case "no":
-		return "Annotation 'approved' set to 'no', no changes applied. Exiting job.", nil
+		return "", errors.New("annotation 'approved' set to 'no', no changes applied, exiting job")
 	case "yes":
 		return terraform.Apply()
 	default:
@@ -169,19 +174,33 @@ func (r *Runner) Populate() error {
 	}
 	r.Action = strings.ToLower(action)
 
-	run, err := r.getExecutionRun(name)
+	ns := os.Getenv("EXECUTOR_NAMESPACE")
+	if ns == "" {
+		return errors.New("namespace not set")
+	}
+	r.Namespace = ns
+
+	run, err := r.getExecutionRun(ns, name)
 	if err != nil {
 		return err
 	}
 	r.ExecutionRun = run
 
-	gSecret, err := r.getSecret(r.ExecutionRun.Spec.Content.Git.SecretName)
-	if err != nil {
-		return err
+	if r.ExecutionRun.Spec.Content.Git.SecretName != "" {
+		gSecret, err := r.getSecret(r.ExecutionRun.Spec.Content.Git.SecretName)
+		if err != nil {
+			return err
+		}
+		auth, err := git.FromSecret(gSecret.Data)
+		if err != nil {
+			return err
+		}
+		r.GitAuth = &auth
+	} else {
+		r.GitAuth = &git.Auth{}
 	}
-	r.GitSecret = gSecret
 
-	vSecret, err := r.getSecret(name)
+	vSecret, err := r.getSecret(r.ExecutionRun.Spec.SecretName)
 	if err != nil {
 		return err
 	}
@@ -191,8 +210,28 @@ func (r *Runner) Populate() error {
 }
 
 func (r *Runner) SetExecutionRunStatus(s string) error {
-	// TODO: do stuff
-	return nil
+	return tryUpdate(func() error {
+		run, err := r.getExecutionRun(r.Namespace, r.ExecutionRun.Name)
+		if err != nil {
+			return err
+		}
+
+		switch s {
+		case "planned":
+			v1.ExecutionRunConditionPlanned.SetStatus(run, "true")
+		case "applied":
+			v1.ExecutionRunConditionApplied.SetStatus(run, "true")
+		default:
+			return fmt.Errorf("unknown execution run status: %v", s)
+		}
+
+		run, err = r.OpClient.ExecutionRun.Update(run)
+		if err != nil {
+			return err
+		}
+		r.ExecutionRun = run
+		return nil
+	})
 }
 
 func (r *Runner) WriteConfigFile() error {
@@ -262,8 +301,8 @@ func (r *Runner) waitForApproval() (string, error) {
 	return "", nil
 }
 
-func (r *Runner) getExecutionRun(name string) (*v1.ExecutionRun, error) {
-	return r.OpClient.ExecutionRun.Get(r.ExecutionRun.ObjectMeta.Namespace, name, metaV1.GetOptions{})
+func (r *Runner) getExecutionRun(namespace, name string) (*v1.ExecutionRun, error) {
+	return r.OpClient.ExecutionRun.Get(namespace, name, metaV1.GetOptions{})
 }
 
 func (r *Runner) getSecret(name string) (*coreV1.Secret, error) {

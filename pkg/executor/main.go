@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -55,12 +56,7 @@ func run() error {
 		return err
 	}
 
-	auth, err := git.FromSecret(runner.GitSecret.Data)
-	if err != nil {
-		return err
-	}
-
-	err = git.CloneRepo(context.Background(), runner.ExecutionRun.Spec.Content.Git.URL, runner.ExecutionRun.Spec.Content.Git.Commit, &auth)
+	err = git.CloneRepo(context.Background(), runner.ExecutionRun.Spec.Content.Git.URL, runner.ExecutionRun.Spec.Content.Git.Commit, runner.GitAuth)
 	if err != nil {
 		return err
 	}
@@ -90,6 +86,8 @@ func run() error {
 		}
 		logrus.Info(out)
 
+		runner.SetExecutionRunStatus("applied")
+
 		err = runner.SaveOutputs()
 		if err != nil {
 			return err
@@ -105,7 +103,8 @@ func run() error {
 	}
 
 	//TODO: delete this
-	time.Sleep(1 * time.Hour)
+	fmt.Println("Sleeping for 10 min so you can look at me....")
+	time.Sleep(10 * time.Minute)
 
 	return nil
 }

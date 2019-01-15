@@ -60,10 +60,9 @@ func (e *executionLifecycle) Remove(obj *v1.Execution) (runtime.Object, error) {
 }
 
 func (e *executionLifecycle) Updated(obj *v1.Execution) (runtime.Object, error) {
-	fmt.Println("Updaaate")
 	input, ok, err := e.gatherInput(obj)
 	if !ok || err != nil {
-		fmt.Printf("gettin here %v", err)
+		fmt.Printf("gettin here: %v, %v", ok, err)
 		return obj, err
 	}
 

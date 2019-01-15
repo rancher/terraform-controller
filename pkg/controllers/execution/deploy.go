@@ -29,7 +29,6 @@ type Input struct {
 
 // prepareForJob returns the executionRun name
 func (e *executionLifecycle) prepareForJob(execution *v1.Execution, input *Input) (string, error) {
-	fmt.Println("PREPARE")
 	combinedVars := combineVars(input)
 	// Always set the key
 	combinedVars["key"] = execution.Name
@@ -169,12 +168,13 @@ func (e *executionLifecycle) createExecutionRun(
 			Name:            name,
 			Namespace:       execution.Namespace,
 			OwnerReferences: or,
+			Annotations:     map[string]string{"approved": ""},
 		},
 		Spec: v1.ExecutionRunSpec{
 			ExecutionName:    execution.Name,
 			AutoConfirm:      execution.Spec.AutoConfirm,
 			SecretName:       "s-" + name,
-			Content:          input.Module.Spec.ModuleContent,
+			Content:          input.Module.Status.Content,
 			ContentHash:      input.Module.Status.ContentHash,
 			ExecutionVersion: execution.Spec.Version,
 		},
@@ -245,6 +245,10 @@ func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, runName, acti
 								coreV1.EnvVar{
 									Name:  "EXECUTOR_RUN_NAME",
 									Value: runName,
+								},
+								coreV1.EnvVar{
+									Name:  "EXECUTOR_NAMESPACE",
+									Value: namespace,
 								},
 							},
 							ImagePullPolicy: coreV1.PullAlways,

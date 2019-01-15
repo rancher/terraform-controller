@@ -23,7 +23,7 @@ func CloneRepo(ctx context.Context, url string, commit string, auth *Auth) error
 	url, env, close := auth.Populate(url)
 	defer close()
 
-	lines, err := git(ctx, env, "clone", "-n", url)
+	lines, err := git(ctx, env, "clone", "-n", url, ".")
 	if err != nil {
 		return err
 	}

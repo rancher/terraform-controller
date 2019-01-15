@@ -3,6 +3,8 @@ package execution
 import (
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
@@ -13,7 +15,7 @@ func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error
 		ns   = obj.Namespace
 		spec = obj.Spec
 	)
-
+	logrus.Info("getting module")
 	mod, err := e.moduleLister.Get(ns, spec.ModuleName)
 	if err != nil {
 		if k8sError.IsNotFound(err) {
@@ -25,16 +27,19 @@ func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error
 	if mod.Status.ContentHash == "" {
 		return nil, false, nil
 	}
+	logrus.Info("getting secrets")
 
 	secrets, ok, err := e.getSecrets(ns, spec)
 	if !ok || err != nil {
 		return nil, false, err
 	}
+	logrus.Info("getting configs")
 
 	configs, ok, err := e.getConfigs(ns, spec)
 	if !ok || err != nil {
 		return nil, false, err
 	}
+	logrus.Info("getting executions")
 
 	executions, ok, err := e.getExecutions(ns, spec)
 	if !ok || err != nil {
@@ -69,7 +74,7 @@ func (e *executionLifecycle) getSecrets(ns string, spec v1.ExecutionSpec) ([]*co
 func (e *executionLifecycle) getConfigs(ns string, spec v1.ExecutionSpec) ([]*corev1.ConfigMap, bool, error) {
 	var configMaps []*corev1.ConfigMap
 
-	for _, name := range spec.Variables.SecretNames {
+	for _, name := range spec.Variables.ConfigNames {
 		configMap, err := e.configMapLister.Get(ns, name)
 		if k8sError.IsNotFound(err) {
 			return configMaps, false, nil
