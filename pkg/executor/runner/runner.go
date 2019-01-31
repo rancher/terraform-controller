@@ -21,9 +21,10 @@ import (
 )
 
 const (
-	approvalMessage = `autoConfirm is not set, and the annotation 'approved' is empty,
-please review the plan and set the annotation 'approved' to 'yes' if approved
-or 'no' if not approved. If set to 'no' the job will exit without making any changes.`
+	approvalMessage = `autoConfirm is not set on the executionRun, and the annotation 'approved' is empty.
+Please review the plan and set the annotation 'approved' to 'yes' if approved
+or 'no' if not approved. If set to 'no' the job will exit without making any changes.
+`
 )
 
 type Runner struct {
@@ -68,8 +69,9 @@ func (r *Runner) Create() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	fmt.Println(out)
-	logrus.Info(out)
+
 	err = r.SetExecutionRunStatus("planned")
 	if err != nil {
 		return "", err
@@ -77,13 +79,14 @@ func (r *Runner) Create() (string, error) {
 
 	// We have autoConfirm, run apply
 	if r.ExecutionRun.Spec.AutoConfirm {
+		logrus.Info("We have autoConfirm, running apply")
 		return terraform.Apply()
 	}
 
 	// Need to wait for approval before running apply
 	approval, ok := r.ExecutionRun.Annotations["approved"]
 	if !ok || approval == "" {
-		logrus.Info(approvalMessage)
+		fmt.Print(approvalMessage)
 		approval, err = r.waitForApproval()
 		if err != nil {
 			return "", err
@@ -94,6 +97,7 @@ func (r *Runner) Create() (string, error) {
 	case "no":
 		return "", errors.New("annotation 'approved' set to 'no', no changes applied, exiting job")
 	case "yes":
+		logrus.Info("Recieved approval, running apply")
 		return terraform.Apply()
 	default:
 		return "", fmt.Errorf("invalid value set for annotation 'approved': %v", approval)
@@ -110,17 +114,18 @@ func (r *Runner) Destroy() (string, error) {
 		return "", err
 	}
 
-	logrus.Info(out)
+	fmt.Println(out)
 
-	// We have autoConfirm, run apply
+	// We have autoConfirm, run destroy
 	if r.ExecutionRun.Spec.AutoConfirm {
+		logrus.Info("We have autoConfirm, running destroy")
 		return terraform.Destroy()
 	}
 
 	// Need to wait for approval before running apply
 	approval, ok := r.ExecutionRun.Annotations["approved"]
 	if !ok || approval == "" {
-		logrus.Info(approvalMessage)
+		fmt.Print(approvalMessage)
 		approval, err = r.waitForApproval()
 		if err != nil {
 			return "", err
@@ -131,6 +136,7 @@ func (r *Runner) Destroy() (string, error) {
 	case "no":
 		return "Annotation 'approved' set to 'no', no changes applied. Exiting job.", nil
 	case "yes":
+		logrus.Info("Recieved approval, running destroy")
 		return terraform.Destroy()
 	default:
 		return "", fmt.Errorf("invalid value set for annotation 'approved': %v", approval)
@@ -149,7 +155,7 @@ func (r *Runner) SaveOutputs() error {
 			return err
 		}
 
-		r.ExecutionRun.Status.Outputs = output
+		run.Status.Outputs = output
 
 		_, err = r.OpClient.ExecutionRun.Update(run)
 		if err != nil {
@@ -272,33 +278,65 @@ func (r *Runner) WriteVarFile() error {
 	return nil
 }
 
+func (r *Runner) DeleteJob() error {
+	jobName := "job-" + r.ExecutionRun.Name
+	prop := metaV1.DeletePropagationBackground
+	delOptions := &metaV1.DeleteOptions{
+		PropagationPolicy: &prop,
+	}
+	return r.K8sClient.BatchV1().Jobs(r.Namespace).Delete(jobName, delOptions)
+}
+
 func (r *Runner) waitForApproval() (string, error) {
-	opts := metaV1.ListOptions{}
+	timeout := int64(3600)
+	opts := metaV1.ListOptions{
+		TimeoutSeconds: &timeout,
+	}
 	watch, err := r.OpClient.ExecutionRun.Watch(opts)
 	if err != nil {
 		return "", err
 	}
 	defer watch.Stop()
 
-	for event := range watch.ResultChan() {
-		run, ok := event.Object.(*v1.ExecutionRun)
-		if !ok {
-			return "", errors.New("unexpected type")
+	events := watch.ResultChan()
+
+	for {
+		select {
+		case event, ok := <-events:
+			if !ok {
+				// Lost the channel, could be timeout, reset the watch
+				break
+			}
+
+			run, ok := event.Object.(*v1.ExecutionRun)
+			if !ok {
+				break
+			}
+
+			if run.Name != r.ExecutionRun.Name {
+				continue
+			}
+
+			approval, ok := run.Annotations["approved"]
+			logrus.Debugf("approval: %v, ok: %v, len: %v\n", approval, ok, len(approval))
+			if !ok || approval == "" || approval == " " {
+				continue
+			}
+
+			return approval, nil
 		}
 
-		if run.Name != r.ExecutionRun.Name {
-			continue
+		logrus.Info("Restart watch")
+		// Reset the watch
+		watch.Stop()
+		watch, err = r.OpClient.ExecutionRun.Watch(opts)
+		if err != nil {
+			return "", err
 		}
+		defer watch.Stop()
 
-		approval, ok := run.Annotations["approved"]
-		if !ok || approval == "" {
-			continue
-		}
-
-		return approval, nil
-
+		events = watch.ResultChan()
 	}
-	return "", nil
 }
 
 func (r *Runner) getExecutionRun(namespace, name string) (*v1.ExecutionRun, error) {

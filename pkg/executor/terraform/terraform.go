@@ -46,6 +46,7 @@ func Output() (string, error) {
 	return combineOutput(output), nil
 }
 
+// Plan runs 'terraform plan' with the destroy flag controlling the play type
 func Plan(destroy bool) (string, error) {
 	args := []string{"plan", "-input=false", "-out=tfplan"}
 	if destroy {

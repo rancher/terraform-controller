@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	"github.com/ibuildthecloud/terraform-operator/pkg/executor/runner"
 	"github.com/ibuildthecloud/terraform-operator/pkg/git"
@@ -76,7 +75,7 @@ func run() error {
 		return err
 	}
 
-	logrus.Info(out)
+	fmt.Print(out)
 
 	switch runner.Action {
 	case "create":
@@ -84,7 +83,7 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		logrus.Info(out)
+		fmt.Print(out)
 
 		runner.SetExecutionRunStatus("applied")
 
@@ -97,14 +96,17 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		logrus.Info(out)
+		fmt.Print(out)
+
+		runner.SetExecutionRunStatus("applied")
+
 	default:
 		return errors.New("action is not valid, ony 'create' or 'destroy' allowed")
 	}
 
 	//TODO: delete this
-	fmt.Println("Sleeping for 10 min so you can look at me....")
-	time.Sleep(10 * time.Minute)
+	// fmt.Println("Sleeping for 5 min so you can look at me....")
+	// time.Sleep(5 * time.Minute)
 
-	return nil
+	return runner.DeleteJob()
 }
