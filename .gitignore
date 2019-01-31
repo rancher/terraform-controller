@@ -6,3 +6,4 @@
 *.swp
 /terraform-operator
 pkg/executor/executor
+/trash.lock
