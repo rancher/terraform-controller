@@ -12,6 +12,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+const (
+	//ActionCreate for terraform
+	ActionCreate = "create"
+	//ActionDestroy for terraform
+	ActionDestroy = "destroy"
+)
+
 func Register(ctx context.Context, ns string, client *client.MasterClient) error {
 	e := &executionLifecycle{
 		clusterRoles:        client.RBAC.ClusterRoles(""),
@@ -56,19 +63,24 @@ func (e *executionLifecycle) Create(obj *v1.Execution) (runtime.Object, error) {
 }
 
 func (e *executionLifecycle) Remove(obj *v1.Execution) (runtime.Object, error) {
-	return obj, e.removeExecution(obj)
+	input, ok, err := e.gatherInput(obj)
+	if !ok || err != nil {
+		fmt.Printf("gettin here: %v, %v", ok, err)
+		return obj, err
+	}
+
+	return obj, e.deployDestroy(obj, input, ActionDestroy)
 }
 
 func (e *executionLifecycle) Updated(obj *v1.Execution) (runtime.Object, error) {
-	fmt.Println("Updaaate")
 	input, ok, err := e.gatherInput(obj)
 	if !ok || err != nil {
-		fmt.Printf("gettin here %v", err)
+		fmt.Printf("gettin here: %v, %v", ok, err)
 		return obj, err
 	}
 
 	return v1.ExecutionConditionJobDeployed.Track(obj, e.executions, func() (runtime.Object, error) {
-		runName, err := e.prepareForJob(obj, input)
+		runName, err := e.deployCreate(obj, input, ActionCreate)
 		if err != nil {
 			return obj, err
 		}

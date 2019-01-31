@@ -161,13 +161,6 @@ func (in *ExecutionRunStatus) DeepCopyInto(out *ExecutionRunStatus) {
 		*out = make([]condition.GenericCondition, len(*in))
 		copy(*out, *in)
 	}
-	if in.Outputs != nil {
-		in, out := &in.Outputs, &out.Outputs
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	return
 }
 

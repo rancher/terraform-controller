@@ -17,8 +17,13 @@ if echo $TAG | grep -q dirty; then
 fi
 
 cp ../bin/terraform-operator .
+cp ../bin/terraform-executor .
 
 IMAGE=${REPO}/terraform-operator:${TAG}
+EXECUTOR_IMAGE=${REPO}/terraform-executor:${TAG}
 docker build -t ${IMAGE} .
+docker build -t ${EXECUTOR_IMAGE} . -f Dockerfile.executor
 echo ${IMAGE} > ../dist/images
+echo ${EXECUTOR_IMAGE} > ../dist/images
 echo Built ${IMAGE}
+echo Built ${EXECUTOR_IMAGE}
