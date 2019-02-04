@@ -86,6 +86,9 @@ func run() error {
 		fmt.Print(out)
 
 		runner.SetExecutionRunStatus("applied")
+		if err != nil {
+			return err
+		}
 
 		err = runner.SaveOutputs()
 		if err != nil {
@@ -99,14 +102,13 @@ func run() error {
 		fmt.Print(out)
 
 		runner.SetExecutionRunStatus("applied")
+		if err != nil {
+			return err
+		}
 
 	default:
 		return errors.New("action is not valid, ony 'create' or 'destroy' allowed")
 	}
-
-	//TODO: delete this
-	// fmt.Println("Sleeping for 5 min so you can look at me....")
-	// time.Sleep(5 * time.Minute)
 
 	return runner.DeleteJob()
 }
