@@ -60,37 +60,37 @@ func (e *executionLifecycle) deployCreate(execution *v1.Execution, input *Input,
 		},
 	}
 
-	logrus.Info("Creating executionRun")
+	logrus.Debug("Creating executionRun")
 	_, err = e.createExecutionRun(or, execution, name, input)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Info("Creating secret")
+	logrus.Debug("Creating secret")
 	_, err = e.createSecretForVariablesFile(or, name, execution, jsonVars)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Info("Creating serviceAccount")
+	logrus.Debug("Creating serviceAccount")
 	sa, err := e.createServiceAccount(or, name, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Info("Creating clusterRoleBinding")
+	logrus.Debug("Creating clusterRoleBinding")
 	rb, err := e.createClusterRoleBinding(or, name, "cluster-admin", sa.Name, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Info("Creating job")
+	logrus.Debug("Creating job")
 	job, err := e.createJob(or, name, action, sa.Name, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Info("Updating owner references")
+	logrus.Debug("Updating owner references")
 	err = e.updateOwnerReference(job, []interface{}{sa, rb}, namespace)
 	if err != nil {
 		return "", err
@@ -537,14 +537,14 @@ func createExecRunAndSecretName(execution *v1.Execution, vars map[string]string,
 		fmt.Println("binary.Write failed:", err)
 	}
 
-	digest := sha256.New()
-	digest.Write([]byte(varHash))
-	digest.Write([]byte(h))
-	digest.Write(buf.Bytes())
+	hash := sha256.New()
+	hash.Write([]byte(varHash))
+	hash.Write([]byte(h))
+	hash.Write(buf.Bytes())
 
-	hash := hex.EncodeToString(digest.Sum(nil))[:10]
+	encoding := hex.EncodeToString(hash.Sum(nil))[:10]
 
-	return execution.ObjectMeta.Name + "-" + hash
+	return execution.ObjectMeta.Name + "-" + encoding
 }
 
 // tryUpdate runs the input func and if the error returned is a conflict error

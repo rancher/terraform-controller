@@ -15,7 +15,7 @@ func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error
 		ns   = obj.Namespace
 		spec = obj.Spec
 	)
-	logrus.Info("getting module")
+	logrus.Debug("Getting module")
 	mod, err := e.moduleLister.Get(ns, spec.ModuleName)
 	if err != nil {
 		if k8sError.IsNotFound(err) {
@@ -27,19 +27,19 @@ func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error
 	if mod.Status.ContentHash == "" {
 		return nil, false, nil
 	}
-	logrus.Info("getting secrets")
+	logrus.Debug("Getting secrets")
 
 	secrets, ok, err := e.getSecrets(ns, spec)
 	if !ok || err != nil {
 		return nil, false, err
 	}
-	logrus.Info("getting configs")
+	logrus.Debug("Getting configs")
 
 	configs, ok, err := e.getConfigs(ns, spec)
 	if !ok || err != nil {
 		return nil, false, err
 	}
-	logrus.Info("getting executions")
+	logrus.Debug("Getting executions")
 
 	executions, ok, err := e.getExecutions(ns, spec)
 	if !ok || err != nil {

@@ -1,0 +1,16 @@
+{
+    "Enable": [
+        "deadcode",
+        "golint",
+        "vet",
+        "gosec"
+    ],
+    "Exclude": [
+        "or be unexported",
+        "hyperkube"
+    ],
+    "Deadline": "60s",
+    "Linters": {
+        "gosec": "gosec -fmt=csv -severity=high -quiet:"
+    }
+}

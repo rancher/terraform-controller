@@ -7,3 +7,7 @@
 /terraform-operator
 pkg/executor/executor
 /trash.lock
+/.vscode
+*.pytest_cache
+*.pyc
+__pycache__
