@@ -34,6 +34,11 @@ func main() {
 			EnvVar: "NAMESPACE",
 			Value:  "default",
 		},
+		cli.StringFlag{
+			Name:   "log-level",
+			EnvVar: "LOG_LEVEL",
+			Value:  "info",
+		},
 	}
 	app.Action = run
 
@@ -44,6 +49,12 @@ func main() {
 
 func run(c *cli.Context) error {
 	logrus.Info("Starting controller")
+	level, err := logrus.ParseLevel(c.String("log-level"))
+	if err != nil {
+		return err
+	}
+	logrus.SetLevel(level)
+
 	ctx := signal.SigTermCancelContext(context.Background())
 
 	kubeConfig, err := resolvehome.Resolve(c.String("kubeconfig"))
