@@ -15,25 +15,23 @@ cd $(dirname $0)/..
 
 echo Running tests
 
-PACKAGES="$(go list ./...)"
+# PACKAGES="$(go list ./...)"
 
-[ "${ARCH}" == "amd64" ] && RACE=-race
-go test ${RACE} -cover -tags=test ${PACKAGES}
+# [ "${ARCH}" == "amd64" ] && RACE=-race
+# go test ${RACE} -cover -tags=test ${PACKAGES}
 
-exec k3s server &
+exec k3s server --write-kubeconfig "/root/.kube/config" &
 PID=$!
 
 trap cleanup exit
 
 # If you try to ping klipper right away things go bad. 
-sleep 5
+sleep 10
 
 while ! [ $(k3s kubectl get --raw /healthz) == ok ]; do
     sleep 2
 done
 
-echo server up
-
-# TODO: This needs to call the python tests
-echo GOING TO SLEEP
-sleep 200
+echo klipper is up, running tests
+cd $(dirname $0)/../tests
+tox

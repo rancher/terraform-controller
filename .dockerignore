@@ -2,3 +2,15 @@
 ./.dapper
 ./.cache
 ./dist
+./build
+./.trash-cache
+./.idea
+./default.etcd
+./tests/MANIFEST
+./tests/.idea
+./tests/.cache
+./tests/.tox
+./tests/.venv
+**/*.pyc
+**/__pycache__
+./management-state/

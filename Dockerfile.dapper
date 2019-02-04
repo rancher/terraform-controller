@@ -4,7 +4,7 @@ ARG DAPPER_HOST_ARCH
 ENV HOST_ARCH=${DAPPER_HOST_ARCH} ARCH=${DAPPER_HOST_ARCH}
 
 RUN apt-get update && \ 
-    apt-get install -y bash git gcc vim less file curl wget ca-certificates && \
+    apt-get install -y bash git gcc vim less file curl wget ca-certificates tox python3.7 && \
     rm -f /bin/sh && \
     ln -s /bin/bash /bin/sh
 
@@ -35,6 +35,7 @@ ENV DAPPER_SOURCE /go/src/github.com/ibuildthecloud/terraform-operator/
 ENV DAPPER_OUTPUT ./bin ./dist
 ENV DAPPER_DOCKER_SOCKET true
 ENV HOME ${DAPPER_SOURCE}
+ENV KUBECONFIG /root/.kube/config
 WORKDIR ${DAPPER_SOURCE}
 VOLUME /var/lib/rancher
 

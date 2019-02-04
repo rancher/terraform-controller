@@ -1,0 +1,5 @@
+autopep8==1.4.3
+flake8==3.6.0
+kubernetes==8.0.0
+pylint==2.2.2
+pytest==4.1.0
