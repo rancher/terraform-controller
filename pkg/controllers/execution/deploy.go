@@ -21,9 +21,11 @@ import (
 )
 
 type Input struct {
-	Module     *v1.Module
-	Executions map[string]string
 	Configs    []*coreV1.ConfigMap
+	EnvVars    []coreV1.EnvVar
+	Executions map[string]string
+	Image      string
+	Module     *v1.Module
 	Secrets    []*coreV1.Secret
 }
 
@@ -60,54 +62,56 @@ func (e *executionLifecycle) deployCreate(execution *v1.Execution, input *Input,
 		},
 	}
 
-	logrus.Debug("Creating executionRun")
+	logrus.Debug("Create - Creating executionRun")
 	_, err = e.createExecutionRun(or, execution, name, input)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Debug("Creating secret")
+	logrus.Debug("Create - Creating secret")
 	_, err = e.createSecretForVariablesFile(or, name, execution, jsonVars)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Debug("Creating serviceAccount")
+	logrus.Debug("Create - Creating serviceAccount")
 	sa, err := e.createServiceAccount(or, name, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Debug("Creating clusterRoleBinding")
+	logrus.Debug("Create - Creating clusterRoleBinding")
 	rb, err := e.createClusterRoleBinding(or, name, "cluster-admin", sa.Name, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Debug("Creating job")
-	job, err := e.createJob(or, name, action, sa.Name, namespace)
+	logrus.Debug("Create - Creating job")
+	job, err := e.createJob(or, input, name, action, sa.Name, namespace)
 	if err != nil {
 		return "", err
 	}
 
-	logrus.Debug("Updating owner references")
+	logrus.Debug("CreateUpdating owner references")
 	err = e.updateOwnerReference(job, []interface{}{sa, rb}, namespace)
 	if err != nil {
 		return "", err
 	}
 
+	logrus.Infof("Deployed create job for execution %v", execution.Name)
+
 	return name, nil
 }
 
 // deployCreate creates all resources for the job to run terraform destroy
-func (e *executionLifecycle) deployDestroy(execution *v1.Execution, input *Input, action string) error {
+func (e *executionLifecycle) deployDestroy(execution *v1.Execution, input *Input, action string) (string, error) {
 	combinedVars := combineVars(input)
 	// Always set the key for the k8s backend
 	combinedVars["key"] = execution.Name
 
 	jsonVars, err := json.Marshal(combinedVars)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	name := createExecRunAndSecretName(execution, combinedVars, input.Module.Status.ContentHash)
@@ -117,43 +121,45 @@ func (e *executionLifecycle) deployDestroy(execution *v1.Execution, input *Input
 
 	or := []metaV1.OwnerReference{}
 
-	logrus.Info("Creating executionRun")
-	run, err := e.createExecutionRun(or, execution, name, input)
+	logrus.Debug("Destroy - Creating executionRun")
+	_, err = e.createExecutionRun(or, execution, name, input)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	logrus.Info("Creating secret")
+	logrus.Debug("Destroy - Creating secret")
 	secret, err := e.createSecretForVariablesFile(or, name, execution, jsonVars)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	logrus.Info("Creating serviceAccount")
+	logrus.Debug("Destroy - Creating serviceAccount")
 	sa, err := e.createServiceAccount(or, name, namespace)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	logrus.Info("Creating clusterRoleBinding")
+	logrus.Debug("Destroy - Creating clusterRoleBinding")
 	rb, err := e.createClusterRoleBinding(or, name, "cluster-admin", sa.Name, namespace)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	logrus.Info("Creating job")
-	job, err := e.createJob(or, name, action, sa.Name, namespace)
+	logrus.Debug("Destroy - Creating job")
+	job, err := e.createJob(or, input, name, action, sa.Name, namespace)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	logrus.Info("Updating owner references")
-	err = e.updateOwnerReference(job, []interface{}{sa, rb, run, secret}, namespace)
+	logrus.Debug("Destroy - Updating owner references")
+	err = e.updateOwnerReference(job, []interface{}{sa, rb, secret}, namespace)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	logrus.Infof("Deployed destroy job for execution %v", execution.Name)
+
+	return name, nil
 }
 
 // runsMatch checks the previous run with the incoming to determine if the job should be executed again
@@ -265,7 +271,9 @@ func (e *executionLifecycle) createSecretForVariablesFile(or []metaV1.OwnerRefer
 	return s, nil
 }
 
-func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, runName, action, sa, namespace string) (*batchV1.Job, error) {
+func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, input *Input, runName, action, sa, namespace string) (*batchV1.Job, error) {
+	createEnvForJob(input, action, runName, namespace)
+
 	meta := metaV1.ObjectMeta{
 		Name:            "job-" + runName,
 		Namespace:       namespace,
@@ -283,27 +291,9 @@ func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, runName, acti
 					ServiceAccountName: sa,
 					Containers: []coreV1.Container{
 						coreV1.Container{
-							Name: "agent",
-							// TODO: Need image name, this just gets the job running
-							Image: "dramich/terraform-executor:dev",
-							Env: []coreV1.EnvVar{
-								coreV1.EnvVar{
-									Name:  "TF_IN_AUTOMATION",
-									Value: "true",
-								},
-								coreV1.EnvVar{
-									Name:  "EXECUTOR_ACTION",
-									Value: action,
-								},
-								coreV1.EnvVar{
-									Name:  "EXECUTOR_RUN_NAME",
-									Value: runName,
-								},
-								coreV1.EnvVar{
-									Name:  "EXECUTOR_NAMESPACE",
-									Value: namespace,
-								},
-							},
+							Name:            "agent",
+							Image:           input.Image,
+							Env:             input.EnvVars,
 							ImagePullPolicy: coreV1.PullAlways,
 						},
 					},
@@ -526,6 +516,29 @@ func combineVars(input *Input) map[string]string {
 	}
 
 	return vars
+}
+
+func createEnvForJob(input *Input, action, runName, namespace string) {
+	envVars := []coreV1.EnvVar{
+		coreV1.EnvVar{
+			Name:  "TF_IN_AUTOMATION",
+			Value: "true",
+		},
+		coreV1.EnvVar{
+			Name:  "EXECUTOR_ACTION",
+			Value: action,
+		},
+		coreV1.EnvVar{
+			Name:  "EXECUTOR_RUN_NAME",
+			Value: runName,
+		},
+		coreV1.EnvVar{
+			Name:  "EXECUTOR_NAMESPACE",
+			Value: namespace,
+		},
+	}
+
+	input.EnvVars = append(input.EnvVars, envVars...)
 }
 
 func createExecRunAndSecretName(execution *v1.Execution, vars map[string]string, h string) string {

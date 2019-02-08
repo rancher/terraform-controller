@@ -224,9 +224,9 @@ func (r *Runner) SetExecutionRunStatus(s string) error {
 
 		switch s {
 		case "planned":
-			v1.ExecutionRunConditionPlanned.SetStatus(run, "true")
+			v1.ExecutionRunConditionPlanned.True(run)
 		case "applied":
-			v1.ExecutionRunConditionApplied.SetStatus(run, "true")
+			v1.ExecutionRunConditionApplied.True(run)
 		default:
 			return fmt.Errorf("unknown execution run status: %v", s)
 		}

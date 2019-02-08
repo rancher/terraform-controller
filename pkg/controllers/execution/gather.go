@@ -6,7 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
-	corev1 "k8s.io/api/core/v1"
+	coreV1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -46,16 +46,23 @@ func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error
 		return nil, false, err
 	}
 
+	envVars, ok, err := e.getEnvVars(ns, spec)
+	if !ok || err != nil {
+		return nil, false, err
+	}
+
 	return &Input{
-		Module:     mod,
-		Executions: executions,
 		Configs:    configs,
+		EnvVars:    envVars,
+		Executions: executions,
+		Image:      spec.Image,
+		Module:     mod,
 		Secrets:    secrets,
 	}, true, nil
 }
 
-func (e *executionLifecycle) getSecrets(ns string, spec v1.ExecutionSpec) ([]*corev1.Secret, bool, error) {
-	var secrets []*corev1.Secret
+func (e *executionLifecycle) getSecrets(ns string, spec v1.ExecutionSpec) ([]*coreV1.Secret, bool, error) {
+	var secrets []*coreV1.Secret
 
 	for _, name := range spec.Variables.SecretNames {
 		secret, err := e.secretsLister.Get(ns, name)
@@ -71,8 +78,8 @@ func (e *executionLifecycle) getSecrets(ns string, spec v1.ExecutionSpec) ([]*co
 	return secrets, true, nil
 }
 
-func (e *executionLifecycle) getConfigs(ns string, spec v1.ExecutionSpec) ([]*corev1.ConfigMap, bool, error) {
-	var configMaps []*corev1.ConfigMap
+func (e *executionLifecycle) getConfigs(ns string, spec v1.ExecutionSpec) ([]*coreV1.ConfigMap, bool, error) {
+	var configMaps []*coreV1.ConfigMap
 
 	for _, name := range spec.Variables.ConfigNames {
 		configMap, err := e.configMapLister.Get(ns, name)
@@ -105,5 +112,44 @@ func (e *executionLifecycle) getExecutions(ns string, spec v1.ExecutionSpec) (ma
 		result[dataName] = execution.Status.ExecutionRunName
 	}
 
+	return result, true, nil
+}
+
+func (e *executionLifecycle) getEnvVars(ns string, spec v1.ExecutionSpec) ([]coreV1.EnvVar, bool, error) {
+	result := []coreV1.EnvVar{}
+
+	for _, name := range spec.Variables.EnvSecretNames {
+		secret, err := e.secretsLister.Get(ns, name)
+		if k8sError.IsNotFound(err) {
+			return result, false, nil
+		} else if err != nil {
+			return result, false, err
+		}
+
+		for k, v := range secret.Data {
+			e := coreV1.EnvVar{
+				Name:  k,
+				Value: string(v),
+			}
+			result = append(result, e)
+		}
+	}
+
+	for _, name := range spec.Variables.EnvConfigName {
+		config, err := e.configMapLister.Get(ns, name)
+		if k8sError.IsNotFound(err) {
+			return result, false, nil
+		} else if err != nil {
+			return result, false, err
+		}
+
+		for k, v := range config.Data {
+			e := coreV1.EnvVar{
+				Name:  k,
+				Value: v,
+			}
+			result = append(result, e)
+		}
+	}
 	return result, true, nil
 }
