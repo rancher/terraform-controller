@@ -21,7 +21,10 @@ var (
 
 	ModuleConditionGitUpdated = condition.Cond("GitUpdated")
 
-	ExecutionConditionJobDeployed = condition.Cond("JobDeployed")
+	ExecutionConditionDestroyJobDeployed = condition.Cond("DestroyJobDeployed")
+	ExecutionConditionJobDeployed        = condition.Cond("JobDeployed")
+	ExecutionConditionMissingInfo        = condition.Cond("MissingInfo")
+	ExecutionConditionWatchRunning       = condition.Cond("WatchRunning")
 
 	ExecutionRunConditionPlanned = condition.Cond("Planned")
 	ExecutionRunConditionApplied = condition.Cond("Applied")
@@ -74,18 +77,22 @@ type Execution struct {
 }
 
 type Variables struct {
-	SecretNames []string `json:"secretNames,omitempty"`
-	ConfigNames []string `json:"configNames,omitempty"`
+	EnvConfigName  []string `json:"envConfigNames,omitempty"`
+	EnvSecretNames []string `json:"envSecretNames,omitempty"`
+	ConfigNames    []string `json:"configNames,omitempty"`
+	SecretNames    []string `json:"secretNames,omitempty"`
 }
 
 type ExecutionSpec struct {
+	Image      string    `json:"image,omitempty"`
 	Variables  Variables `json:"variables,omitempty"`
 	ModuleName string    `json:"moduleName,omitempty"`
 	// Data is dataName mapped to another executionRun name
 	// so terraform variable name that should be an output from the run
-	Data        map[string]string `json:"data,omitempty"`
-	AutoConfirm bool              `json:"autoConfirm,omitempty"`
-	Version     int32             `json:"version,omitempty"`
+	Data            map[string]string `json:"data,omitempty"`
+	AutoConfirm     bool              `json:"autoConfirm,omitempty"`
+	DestroyOnDelete bool              `json:"destroyOnDelete,omitempty"`
+	Version         int32             `json:"version,omitempty"`
 }
 
 type ExecutionStatus struct {
