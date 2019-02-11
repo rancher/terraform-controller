@@ -7,10 +7,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/ibuildthecloud/terraform-operator/pkg/server"
 	"github.com/rancher/norman"
 	"github.com/rancher/norman/pkg/resolvehome"
 	"github.com/rancher/norman/signal"
+	"github.com/rancher/terraform-operator/pkg/server"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )

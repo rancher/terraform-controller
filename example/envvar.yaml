@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  PROXY_URL: proxy_url
+  DEBUG: true
+kind: ConfigMap
+metadata:
+  name: env-config

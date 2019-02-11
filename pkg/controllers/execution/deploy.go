@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ibuildthecloud/terraform-operator/pkg/digest"
-	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/pkg/errors"
+	"github.com/rancher/terraform-operator/pkg/digest"
+	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/sirupsen/logrus"
 	batchV1 "k8s.io/api/batch/v1"
 	coreV1 "k8s.io/api/core/v1"

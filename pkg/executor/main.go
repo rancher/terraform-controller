@@ -7,8 +7,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/ibuildthecloud/terraform-operator/pkg/executor/runner"
-	"github.com/ibuildthecloud/terraform-operator/pkg/git"
+	"github.com/rancher/terraform-operator/pkg/executor/runner"
+	"github.com/rancher/terraform-operator/pkg/git"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

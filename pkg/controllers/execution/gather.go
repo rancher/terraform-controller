@@ -3,9 +3,9 @@ package execution
 import (
 	"fmt"
 
+	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/sirupsen/logrus"
 
-	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	coreV1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
 )
