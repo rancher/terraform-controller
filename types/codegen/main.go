@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ibuildthecloud/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
+	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/rancher/norman/generator"
 	"github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
@@ -9,7 +9,7 @@ import (
 	rbacV1 "k8s.io/api/rbac/v1"
 )
 
-const pkg = "github.com/ibuildthecloud/terraform-operator/types"
+const pkg = "github.com/rancher/terraform-operator/types"
 
 func main() {
 	if err := generator.DefaultGenerate(v1.Schemas, pkg, false, nil); err != nil {

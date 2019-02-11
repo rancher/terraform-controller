@@ -23,7 +23,7 @@ RUN go get -d golang.org/x/lint/golint && \
     go install golang.org/x/lint/golint && \
     rm -rf /go/src /go/pkg
 
-RUN curl -sLf https://github.com/ibuildthecloud/k3s/releases/download/v0.1.0-rc1/k3s -o k3s && \
+RUN curl -sLf https://github.com/ibuildthecloud/k3s/releases/download/v0.1.0-rc3/k3s -o k3s && \
     chmod +x k3s && \
     mv k3s /usr/local/bin && \
     wget -O - ${!DOCKER_URL} > /usr/bin/docker && \
@@ -31,7 +31,7 @@ RUN curl -sLf https://github.com/ibuildthecloud/k3s/releases/download/v0.1.0-rc1
 
 ENV DAPPER_ENV REPO TAG DRONE_TAG
 ENV DAPPER_RUN_ARGS --privileged
-ENV DAPPER_SOURCE /go/src/github.com/ibuildthecloud/terraform-operator/
+ENV DAPPER_SOURCE /go/src/github.com/rancher/terraform-operator/
 ENV DAPPER_OUTPUT ./bin ./dist
 ENV DAPPER_DOCKER_SOCKET true
 ENV HOME ${DAPPER_SOURCE}
