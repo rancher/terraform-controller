@@ -39,6 +39,8 @@ steps:
     username:
       from_secret: docker_username
   when:
+    refs:
+    - refs/tags/v*
     event:
     - tag
 

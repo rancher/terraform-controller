@@ -14,10 +14,11 @@ spec:
     metadata:
       labels:
         run: terraform-operator
-        version: v0.0.0
+        version: v0.0.0-1
     spec:
+      serviceAccountName: terraform-operator
       containers:
-        - image: cloudnautique/terraform-operator:dev
+        - image: rancher/terraform-operator:dev
           imagePullPolicy: Always
           name: terraform-operator
           args: ["--namespace", "tf-operator"]

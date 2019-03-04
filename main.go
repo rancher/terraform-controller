@@ -24,6 +24,9 @@ func main() {
 	app.Name = "terraform-operator"
 	app.Version = VERSION
 	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name: "external",
+		},
 		cli.StringFlag{
 			Name:   "kubeconfig",
 			EnvVar: "KUBECONFIG",
@@ -49,6 +52,9 @@ func main() {
 
 func run(c *cli.Context) error {
 	logrus.Info("Starting controller")
+	k8sMode := "auto"
+	kubeConfig := ""
+
 	level, err := logrus.ParseLevel(c.String("log-level"))
 	if err != nil {
 		return err
@@ -57,14 +63,17 @@ func run(c *cli.Context) error {
 
 	ctx := signal.SigTermCancelContext(context.Background())
 
-	kubeConfig, err := resolvehome.Resolve(c.String("kubeconfig"))
-	if err != nil {
-		return err
+	if c.Bool("external") {
+		kubeConfig, err = resolvehome.Resolve(c.String("kubeconfig"))
+		if err != nil {
+			return err
+		}
+		k8sMode = "external"
 	}
 
 	ns := c.String("namespace")
 	ctx, _, err = server.Config(ns).Build(ctx, &norman.Options{
-		K8sMode:    "external",
+		K8sMode:    k8sMode,
 		KubeConfig: kubeConfig,
 	})
 
