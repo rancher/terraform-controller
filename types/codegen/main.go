@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/rancher/norman/generator"
+	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
 	"github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"

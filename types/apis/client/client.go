@@ -3,11 +3,11 @@ package client
 import (
 	"context"
 
+	"github.com/rancher/norman"
 	batchv1 "github.com/rancher/terraform-operator/types/apis/batch/v1"
 	corev1 "github.com/rancher/terraform-operator/types/apis/core/v1"
 	rbacv1 "github.com/rancher/terraform-operator/types/apis/rbac.authorization.k8s.io/v1"
 	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
-	"github.com/rancher/norman"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
