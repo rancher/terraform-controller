@@ -26,7 +26,7 @@ steps:
     event:
     - tag
 
-- name: publish-image
+- name: publish-operator-image
   pull: default
   image: plugins/docker
   settings:
@@ -43,6 +43,25 @@ steps:
     - refs/tags/v*
     event:
     - tag
+
+- name: publish-executor-image
+  pull: default
+  image: plugins/docker
+  settings:
+    context: package/
+    dockerfile: package/Dockerfile.executor
+    repo: rancher/terraform-operator-executor
+    tag: "${DRONE_TAG}"
+    password:
+      from_secret: docker_password
+    username:
+      from_secret: docker_username
+  when:
+    refs:
+    - refs/tags/v*
+    event:
+    - tag
+
 
 volumes:
 - name: docker

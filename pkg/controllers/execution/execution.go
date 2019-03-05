@@ -64,7 +64,7 @@ func (e *executionLifecycle) Create(obj *v1.Execution) (runtime.Object, error) {
 	}
 	if obj.Spec.Image == "" {
 		// TODO: Need a real default image
-		obj.Spec.Image = "dramich/terraform-executor:dev"
+		obj.Spec.Image = "rancher/terraform-operator-executor:v0.0.2"
 	}
 	return e.executions.Update(obj)
 }
