@@ -1,29 +1,50 @@
 ---
-pipeline:
-  build:
-    privileged: true
-    image: rancher/dapper:1.11.2
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    commands:
-    - dapper ci
+kind: pipeline
+name: default
 
-  stage-binaries:
-    image: rancher/dapper:1.11.2
-    commands:
-    - cp -r ./bin/* ./package/
-    when:
-      branch: master
-      event: tag
+platform:
+  os: linux
+  arch: amd64
 
+steps:
+- name: build
+  pull: default
+  image: rancher/dapper:v0.4.1
+  commands:
+  - dapper ci
+  privileged: true
+  volumes:
+  - name: docker
+    path: /var/run/docker.sock
 
-  publish-image:
-    image: plugins/docker
+- name: stage-binaries
+  pull: default
+  image: rancher/dapper:v0.4.1
+  commands:
+  - "cp -r ./bin/* ./package/"
+  when:
+    event:
+    - tag
+
+- name: publish-image
+  pull: default
+  image: plugins/docker
+  settings:
+    context: package/
     dockerfile: package/Dockerfile
     repo: rancher/terraform-operator
-    context: package/
-    tag: ${DRONE_TAG}
-    secrets: [docker_username, docker_password]
-    when:
-      branch: master
-      event: tag
+    tag: "${DRONE_TAG}"
+    password:
+      from_secret: docker_password
+    username:
+      from_secret: docker_username
+  when:
+    refs:
+    - refs/tags/v*
+    event:
+    - tag
+
+volumes:
+- name: docker
+  host:
+    path: /var/run/docker.sock

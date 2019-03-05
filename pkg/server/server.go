@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 
+	"github.com/rancher/norman"
+	"github.com/rancher/norman/types"
 	"github.com/rancher/terraform-operator/pkg/controllers/execution"
 	"github.com/rancher/terraform-operator/pkg/controllers/module"
 	batchv1 "github.com/rancher/terraform-operator/types/apis/batch/v1"
@@ -10,8 +12,6 @@ import (
 	corev1 "github.com/rancher/terraform-operator/types/apis/core/v1"
 	rbacv1 "github.com/rancher/terraform-operator/types/apis/rbac.authorization.k8s.io/v1"
 	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
-	"github.com/rancher/norman"
-	"github.com/rancher/norman/types"
 )
 
 func Config(ns string) *norman.Config {
