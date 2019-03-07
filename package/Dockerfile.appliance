@@ -1,0 +1,2 @@
+FROM rancher/k3s:v0.2.0-rc5
+COPY tf-operator.yaml /var/lib/rancher/k3s/server/manifests/
