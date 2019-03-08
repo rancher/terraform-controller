@@ -80,6 +80,45 @@ steps:
     event:
     - tag
 
+- name: github_binary_prerelease
+  pull: default
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: github_token
+    checksum:
+    - sha256
+    files:
+    - "bin/*"
+    prerelease: true
+  when:
+    event:
+    - tag
+    ref:
+      include:
+      - "refs/tags/*rc*"
+      - "refs/tags/*alpha*"
+
+- name: github_binary_release
+  pull: default
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: github_token
+    checksum:
+    - sha256
+    files:
+    - "bin/*"
+  when:
+    event:
+    - tag
+    ref:
+      include:
+      - "refs/tags/v2*"
+      exclude:
+      - "refs/tags/*rc*"
+      - "refs/tags/*alpha*"
+
 volumes:
 - name: docker
   host:
