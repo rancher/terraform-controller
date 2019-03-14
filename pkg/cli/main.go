@@ -32,6 +32,7 @@ func main() {
 	app.Commands = []cli.Command{
 		cmds.ModuleCommand(),
 		cmds.ExecutionCommand(),
+		cmds.RunCommand(),
 	}
 	app.Action = run
 
