@@ -201,6 +201,7 @@ func executionListToTableStrings(executions *v1.ExecutionList) [][]string {
 		values = append(values, []string{
 			execution.Name,
 			execution.Status.ExecutionRunName,
+			execution.Status.Conditions[len(execution.Status.Conditions)-1].Type,
 		})
 	}
 
