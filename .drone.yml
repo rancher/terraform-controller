@@ -51,7 +51,9 @@ steps:
     context: package/
     dockerfile: package/Dockerfile.executor
     repo: rancher/terraform-operator-executor
-    tag: "${DRONE_TAG}"
+    tags:
+    - "${DRONE_TAG}"
+    - latest
     password:
       from_secret: docker_password
     username:
@@ -69,7 +71,9 @@ steps:
     context: package/
     dockerfile: package/Dockerfile.appliance
     repo: rancher/terraform-operator-appliance
-    tag: "${DRONE_TAG}"
+    tags:
+    - "${DRONE_TAG}"
+    - latest
     password:
       from_secret: docker_password
     username:
