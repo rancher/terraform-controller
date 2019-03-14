@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var simpleRunTableHeaders = []string{"RUN NAME", "APPROVED"}
+var simpleRunTableHeaders = []string{"RUN NAME", "EXECUTION NAME", "APPROVAL"}
 
 func RunCommand() cli.Command {
 	return cli.Command{
@@ -117,6 +117,7 @@ func runsListToTableStrings(runs *v1.ExecutionRunList) [][]string {
 
 		values = append(values, []string{
 			run.Name,
+			run.ObjectMeta.OwnerReferences[0].Name,
 			approved,
 		})
 	}
