@@ -51,7 +51,9 @@ steps:
     context: package/
     dockerfile: package/Dockerfile.executor
     repo: rancher/terraform-operator-executor
-    tag: "${DRONE_TAG}"
+    tags:
+    - "${DRONE_TAG}"
+    - latest
     password:
       from_secret: docker_password
     username:
@@ -69,7 +71,9 @@ steps:
     context: package/
     dockerfile: package/Dockerfile.appliance
     repo: rancher/terraform-operator-appliance
-    tag: "${DRONE_TAG}"
+    tags:
+    - "${DRONE_TAG}"
+    - latest
     password:
       from_secret: docker_password
     username:
@@ -79,6 +83,45 @@ steps:
     - refs/tags/v*
     event:
     - tag
+
+- name: github_binary_prerelease
+  pull: default
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: github_token
+    checksum:
+    - sha256
+    files:
+    - "bin/*"
+    prerelease: true
+  when:
+    event:
+    - tag
+    ref:
+      include:
+      - "refs/tags/*rc*"
+      - "refs/tags/*alpha*"
+
+- name: github_binary_release
+  pull: default
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: github_token
+    checksum:
+    - sha256
+    files:
+    - "bin/*"
+  when:
+    event:
+    - tag
+    ref:
+      include:
+      - "refs/tags/v2*"
+      exclude:
+      - "refs/tags/*rc*"
+      - "refs/tags/*alpha*"
 
 volumes:
 - name: docker

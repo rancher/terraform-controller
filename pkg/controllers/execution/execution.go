@@ -2,6 +2,7 @@ package execution
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,6 +22,8 @@ const (
 	ActionCreate = "create"
 	//ActionDestroy for terraform
 	ActionDestroy = "destroy"
+	//Default Image
+	DefaultExecutorImage = "rancher/terraform-operator-executor"
 )
 
 func Register(ctx context.Context, ns string, client *client.MasterClient) error {
@@ -64,7 +67,7 @@ func (e *executionLifecycle) Create(obj *v1.Execution) (runtime.Object, error) {
 	}
 	if obj.Spec.Image == "" {
 		// TODO: Need a real default image
-		obj.Spec.Image = "rancher/terraform-operator-executor:v0.0.2"
+		obj.Spec.Image = fmt.Sprintf("%s:latest", DefaultExecutorImage)
 	}
 	return e.executions.Update(obj)
 }
