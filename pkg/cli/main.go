@@ -14,7 +14,7 @@ var (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "rtoc"
+	app.Name = "tffy"
 	app.Version = VERSION
 	app.Flags = []cli.Flag{
 		cli.StringFlag{

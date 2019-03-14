@@ -12,7 +12,7 @@ var simpleExecutionTableHeader = []string{"NAME", "RUNNER NAME", "STATUS"}
 func ExecutionCommand() cli.Command {
 	return cli.Command{
 		Name:    "executions",
-		Aliases: []string{"module"},
+		Aliases: []string{"execution"},
 		Usage:   "Operations on TF Operator modules",
 		Action:  executionList,
 		Subcommands: []cli.Command{
