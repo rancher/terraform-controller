@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
+	"github.com/rancher/terraform-operator/pkg/cli/cmds"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"github.com/rancher/terraform-operator/pkg/cli/cmds"
 )
 
 var (
@@ -31,6 +31,7 @@ func main() {
 
 	app.Commands = []cli.Command{
 		cmds.ModuleCommand(),
+		cmds.ExecutionCommand(),
 	}
 	app.Action = run
 

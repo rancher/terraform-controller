@@ -8,7 +8,7 @@ import (
 
 var simpleModuleTableHeader = []string{"NAME", "GIT REPO"}
 
-type InvalidArgs struct {}
+type InvalidArgs struct{}
 
 func (e InvalidArgs) Error() string {
 	return "Invalid args"
@@ -16,32 +16,30 @@ func (e InvalidArgs) Error() string {
 
 func ModuleCommand() cli.Command {
 	return cli.Command{
-		Name: "modules",
+		Name:    "modules",
 		Aliases: []string{"module"},
-		Usage: "Operations on TF Operator modules",
-		Action: moduleList,
+		Usage:   "Operations on TF Operator modules",
+		Action:  moduleList,
 		Subcommands: []cli.Command{
 			{
-				Name: "ls",
-				Usage: "List Modules",
+				Name:      "ls",
+				Usage:     "List Modules",
 				ArgsUsage: "None",
-				Action: moduleList,
+				Action:    moduleList,
 			},
 			{
-				Name: "create",
-				Usage: "Create new module",
+				Name:      "create",
+				Usage:     "Create new module",
 				ArgsUsage: "[NAME] [GIT URL]",
-				Action: createModule,
+				Action:    createModule,
 			},
 			{
-				Name: "delete",
-				Usage: "Create new module",
+				Name:      "delete",
+				Usage:     "Create new module",
 				ArgsUsage: "[NAME]",
-				Action: deleteModule,
+				Action:    deleteModule,
 			},
 		},
-
-		
 	}
 }
 
@@ -54,7 +52,7 @@ func moduleList(c *cli.Context) error {
 		return err
 	}
 
-	NewTableWriter(getSimpleModuleTableHeader(),moduleListToTableStrings(modules)).Write()
+	NewTableWriter(getSimpleModuleTableHeader(), moduleListToTableStrings(modules)).Write()
 
 	return nil
 }
@@ -70,7 +68,7 @@ func createModule(c *cli.Context) error {
 	moduleName := c.Args()[0]
 	gitUrl := c.Args()[1]
 
-	return doModuleCreate(namespace,kubeConfig, moduleName, gitUrl)
+	return doModuleCreate(namespace, kubeConfig, moduleName, gitUrl)
 }
 
 func deleteModule(c *cli.Context) error {
@@ -87,16 +85,16 @@ func deleteModule(c *cli.Context) error {
 }
 
 func getModuleList(namespace, kubeConfig string) (*v1.ModuleList, error) {
-	clientSet, err := newModuleClient(kubeConfig)
+	clientSet, err := newV1Client(kubeConfig)
 	if err != nil {
 		return nil, err
 	}
-	return clientSet.Module.List(namespace ,metav1.ListOptions{})
+	return clientSet.Module.List(namespace, metav1.ListOptions{})
 
 }
 
-func doModuleCreate(namespace,kubeConfig,name,url string) error {
-	clientSet, err := newModuleClient(kubeConfig)
+func doModuleCreate(namespace, kubeConfig, name, url string) error {
+	clientSet, err := newV1Client(kubeConfig)
 	if err != nil {
 		return err
 	}
@@ -118,8 +116,8 @@ func doModuleCreate(namespace,kubeConfig,name,url string) error {
 	return err
 }
 
-func doModuleDelete(namespace,kubeConfig,name string) error {
-	clientSet, err := newModuleClient(kubeConfig)
+func doModuleDelete(namespace, kubeConfig, name string) error {
+	clientSet, err := newV1Client(kubeConfig)
 	if err != nil {
 		return err
 	}
@@ -128,7 +126,7 @@ func doModuleDelete(namespace,kubeConfig,name string) error {
 }
 
 func getSimpleModuleTableHeader() []string {
-  return simpleModuleTableHeader
+	return simpleModuleTableHeader
 }
 
 func moduleListToTableStrings(modules *v1.ModuleList) [][]string {

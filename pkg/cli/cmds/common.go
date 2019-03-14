@@ -16,7 +16,7 @@ func getKubeClientSet(kubeconfig string) (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(config)
 }
 
-func newModuleClient(kubeconfig string) (*v1.Clients, error) {
+func newV1Client(kubeconfig string) (*v1.Clients, error) {
 	var config *rest.Config
 	var err error
 
