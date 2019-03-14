@@ -118,7 +118,7 @@ steps:
     - tag
     ref:
       include:
-      - "refs/tags/v2*"
+      - "refs/tags/v*"
       exclude:
       - "refs/tags/*rc*"
       - "refs/tags/*alpha*"
