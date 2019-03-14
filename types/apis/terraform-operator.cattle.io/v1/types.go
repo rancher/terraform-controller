@@ -96,8 +96,9 @@ type ExecutionSpec struct {
 }
 
 type ExecutionStatus struct {
-	Conditions       []condition.GenericCondition `json:"conditions,omitempty"`
-	ExecutionRunName string                       `json:"executionRunName,omitempty"`
+	Conditions        []condition.GenericCondition `json:"conditions,omitempty"`
+	ExecutionRunName  string                       `json:"executionRunName,omitempty"`
+	ExecutionPlanName string                       `json:"executionPlanName,omitempty"`
 }
 
 type ExecutionRun struct {
