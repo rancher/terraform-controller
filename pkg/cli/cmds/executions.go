@@ -12,7 +12,7 @@ var simpleExecutionTableHeader = []string{"NAME", "RUNNER NAME", "STATUS"}
 func ExecutionCommand() cli.Command {
 	return cli.Command{
 		Name:    "executions",
-		Aliases: []string{"module"},
+		Aliases: []string{"execution"},
 		Usage:   "Operations on TF Operator modules",
 		Action:  executionList,
 		Subcommands: []cli.Command{
@@ -201,6 +201,7 @@ func executionListToTableStrings(executions *v1.ExecutionList) [][]string {
 		values = append(values, []string{
 			execution.Name,
 			execution.Status.ExecutionRunName,
+			execution.Status.Conditions[len(execution.Status.Conditions)-1].Type,
 		})
 	}
 
