@@ -1,39 +1,7 @@
 #!/bin/bash
 set -e
 
-cleanup()
-{
-    EXIT=$?
-    set +e
-    echo Stopping klipper
-    kill $PID
-    wait $PID
-    return $EXIT
-}
-
 cd $(dirname $0)/..
 
 echo Running tests
-
-PACKAGES="$(go list ./...)"
-
-[ "${ARCH}" == "amd64" ] && RACE=-race
-go test ${RACE} -cover -tags=test ${PACKAGES}
-
-exec k3s server &
-PID=$!
-
-trap cleanup exit
-
-# If you try to ping klipper right away things go bad. 
-sleep 5
-
-while ! [ $(k3s kubectl get --raw /healthz) == ok ]; do
-    sleep 2
-done
-
-echo server up
-
-# TODO: This needs to call the python tests
-echo GOING TO SLEEP
-sleep 200
+go test -cover -tags=test ./...

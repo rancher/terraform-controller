@@ -7,12 +7,15 @@ echo Running validation
 
 PACKAGES="$(go list ./...)"
 
-echo Running: gometalinter
-for i in ${PACKAGES}; do
-    if [ -n "$(gometalinter $i | tee /dev/stderr)" ]; then
-        failed=true
-    fi
-done
-test -z "$failed"
+if ! command -v golangci-lint; then
+    echo Skipping validation: no golangci-lint available
+    exit
+fi
+
+echo Running validation
+
+echo Running: golangci-lint
+golangci-lint run
+
 echo Running: go fmt
 test -z "$(go fmt ${PACKAGES} | tee /dev/stderr)"
