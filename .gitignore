@@ -1,13 +1,7 @@
 /.dapper
 /.cache
-/.idea
+/.trash-cache
 /bin
 /dist
 *.swp
-/terraform-operator
-pkg/executor/executor
-/trash.lock
-/.vscode
-*.pytest_cache
-*.pyc
-__pycache__
+.idea

@@ -1,5 +1,6 @@
-//go:generate go run types/codegen/cleanup/main.go
-//go:generate go run types/codegen/main.go
+//go:generate go run pkg/codegen/cleanup/main.go
+//go:generate /bin/rm -rf pkg/generated
+//go:generate go run pkg/codegen/main.go
 
 package main
 
@@ -7,12 +8,17 @@ import (
 	"context"
 	"os"
 
-	"github.com/rancher/norman"
-	"github.com/rancher/norman/pkg/resolvehome"
-	"github.com/rancher/norman/signal"
-	"github.com/rancher/terraform-operator/pkg/server"
+	"github.com/rancher/terraform-controller/pkg/generated/controllers/batch"
+	"github.com/rancher/terraform-controller/pkg/generated/controllers/core"
+	"github.com/rancher/terraform-controller/pkg/generated/controllers/rbac"
+	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
+	"github.com/rancher/terraform-controller/pkg/terraform"
+	"github.com/rancher/wrangler/pkg/resolvehome"
+	"github.com/rancher/wrangler/pkg/signals"
+	"github.com/rancher/wrangler/pkg/start"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -21,11 +27,14 @@ var (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "terraform-operator"
+	app.Name = "terraform-controller"
 	app.Version = VERSION
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{
-			Name: "external",
+
+		cli.IntFlag{
+			Name:   "threads",
+			EnvVar: "THREADS",
+			Value:  2,
 		},
 		cli.StringFlag{
 			Name:   "kubeconfig",
@@ -38,9 +47,9 @@ func main() {
 			Value:  "default",
 		},
 		cli.StringFlag{
-			Name:   "log-level",
-			EnvVar: "LOG_LEVEL",
-			Value:  "info",
+			Name:   "masterurl",
+			EnvVar: "MASTERURL",
+			Value:  "",
 		},
 	}
 	app.Action = run
@@ -50,37 +59,67 @@ func main() {
 	}
 }
 
-func run(c *cli.Context) error {
+func run(c *cli.Context) {
+
+	logrus.SetLevel(logrus.DebugLevel)
+	//logrus.SetReportCaller(true)
+
 	logrus.Info("Starting controller")
-	k8sMode := "auto"
-	kubeConfig := ""
+	kubeconfig, err := resolvehome.Resolve(c.String("kubeconfig"))
 
-	level, err := logrus.ParseLevel(c.String("log-level"))
+	if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
+		kubeconfig = ""
+	}
+
 	if err != nil {
-		return err
+		logrus.Info("Resolving home dir failed.")
 	}
-	logrus.SetLevel(level)
-
-	ctx := signal.SigTermCancelContext(context.Background())
-
-	if c.Bool("external") {
-		kubeConfig, err = resolvehome.Resolve(c.String("kubeconfig"))
-		if err != nil {
-			return err
-		}
-		k8sMode = "external"
-	}
-
+	threadiness := c.Int("threads")
+	masterurl := c.String("masterurl")
 	ns := c.String("namespace")
-	ctx, _, err = server.Config(ns).Build(ctx, &norman.Options{
-		K8sMode:    k8sMode,
-		KubeConfig: kubeConfig,
-	})
 
+	ctx := signals.SetupSignalHandler(context.Background())
+
+	cfg, err := clientcmd.BuildConfigFromFlags(masterurl, kubeconfig)
 	if err != nil {
-		return err
+		logrus.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
-	<-ctx.Done()
 
-	return nil
+	tfFactory, err := terraformcontroller.NewFactoryFromConfigWithNamespace(cfg, ns)
+	if err != nil {
+		logrus.Fatalf("Error building terraform controllers: %s", err.Error())
+	}
+
+	coreFactory, err := core.NewFactoryFromConfigWithNamespace(cfg, ns)
+	if err != nil {
+		logrus.Fatalf("Error building core controllers: %s", err.Error())
+	}
+
+	rbacFactory, err := rbac.NewFactoryFromConfigWithNamespace(cfg, ns)
+	if err != nil {
+		logrus.Fatalf("Error building rbac controllers: %s", err.Error())
+	}
+
+	batchFactory, err := batch.NewFactoryFromConfigWithNamespace(cfg, ns)
+	if err != nil {
+		logrus.Fatalf("Error building rbac controllers: %s", err.Error())
+	}
+
+	terraform.Register(ctx,
+		tfFactory.Terraformcontroller().V1().Execution(),
+		tfFactory.Terraformcontroller().V1().Module(),
+		tfFactory.Terraformcontroller().V1().ExecutionRun(),
+		rbacFactory.Rbac().V1().ClusterRole(),
+		rbacFactory.Rbac().V1().ClusterRoleBinding(),
+		coreFactory.Core().V1().Secret(),
+		coreFactory.Core().V1().ConfigMap(),
+		coreFactory.Core().V1().ServiceAccount(),
+		batchFactory.Batch().V1().Job(),
+	)
+
+	if err := start.All(ctx, threadiness, tfFactory, coreFactory, rbacFactory, batchFactory); err != nil {
+		logrus.Fatalf("Error starting: %s", err.Error())
+	}
+
+	<-ctx.Done()
 }

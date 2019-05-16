@@ -1,7 +1,0 @@
-apiVersion: terraform-operator.cattle.io/v1
-kind: Module
-metadata:
-  name: my-module
-spec:
-  git:
-    url: https://github.com/dramich/domodule
