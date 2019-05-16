@@ -1,33 +1,44 @@
 package cmds
 
 import (
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	"context"
+	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
+	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/wrangler/pkg/signals"
+	"github.com/rancher/wrangler/pkg/start"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func getKubeClientSet(kubeconfig string) (*kubernetes.Clientset, error) {
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewForConfig(config)
+type controllers struct {
+	modules       v1.ModuleController
+	executions    v1.ExecutionController
+	executionRuns v1.ExecutionRunController
 }
 
-func newV1Client(kubeconfig string) (*v1.Clients, error) {
-	var config *rest.Config
-	var err error
+func getControllers(kubeconfig, ns string) (*controllers, error) {
+	//todo add masterurl flag?
 
-	config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
-		return nil, err
+		logrus.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
 
-	clientConfig, err := v1.NewForConfig(*config)
+	tfFactory, err := terraformcontroller.NewFactoryFromConfigWithNamespace(cfg, ns)
 	if err != nil {
-		return nil, err
+		logrus.Fatalf("Error building terraform controllers: %s", err.Error())
 	}
-	return v1.NewClientsFromInterface(clientConfig), nil
+
+	controllers := &controllers{
+		modules:       tfFactory.Terraformcontroller().V1().Module(),
+		executions:    tfFactory.Terraformcontroller().V1().Execution(),
+		executionRuns: tfFactory.Terraformcontroller().V1().ExecutionRun(),
+	}
+
+	ctx := signals.SetupSignalHandler(context.Background())
+	if err := start.All(ctx, 1, tfFactory); err != nil {
+		logrus.Fatalf("Error starting: %s", err.Error())
+	}
+
+	return controllers, nil
 }

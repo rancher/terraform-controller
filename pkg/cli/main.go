@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	"github.com/rancher/terraform-operator/pkg/cli/cmds"
-	"github.com/sirupsen/logrus"
+	"github.com/rancher/terraform-controller/pkg/cli/cmds"
 	"github.com/urfave/cli"
+	"k8s.io/klog"
 )
 
 var (
@@ -37,7 +37,7 @@ func main() {
 	app.Action = run
 
 	if err := app.Run(os.Args); err != nil {
-		logrus.Fatal(err)
+		klog.Fatal(err)
 	}
 }
 
