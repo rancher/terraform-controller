@@ -1,0 +1,25 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: terraform-controller
+  name: terraform-controller
+  namespace: terraform-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: terraform-controller
+  template:
+    metadata:
+      labels:
+        run: terraform-controller
+        version: v0.0.3
+    spec:
+      serviceAccountName: terraform-controller
+      containers:
+        - image: rancher/terraform-controller:dev
+          imagePullPolicy: Never
+          name: terraform-controller
+          command: ["terraform-controller"]
+          args: ["--namespace", "terraform-controller"]

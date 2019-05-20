@@ -1,13 +1,13 @@
-apiVersion: terraform-operator.cattle.io/v1
+apiVersion: terraformcontroller.cattle.io/v1
 kind: Execution
 metadata:
   name: my-execution
 spec:
   moduleName: my-module
   destroyOnDelete: true
-  autoConfirm: false
+  autoConfirm: true
   variables:
-    SecretNames:
+    secretNames:
       - mysecret
     envConfigNames:
       - env-config
