@@ -7,8 +7,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/rancher/terraform-operator/pkg/executor/runner"
-	"github.com/rancher/terraform-operator/pkg/git"
+	"github.com/rancher/terraform-controller/pkg/executor/runner"
+	"github.com/rancher/terraform-controller/pkg/git"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -55,10 +55,13 @@ func run() error {
 		return err
 	}
 
+	logrus.Info("before clone")
 	err = git.CloneRepo(context.Background(), runner.ExecutionRun.Spec.Content.Git.URL, runner.ExecutionRun.Spec.Content.Git.Commit, runner.GitAuth)
 	if err != nil {
 		return err
 	}
+
+	logrus.Info("before config")
 
 	err = runner.WriteConfigFile()
 	if err != nil {
@@ -85,7 +88,7 @@ func run() error {
 		}
 		fmt.Print(out)
 
-		runner.SetExecutionRunStatus("applied")
+		err = runner.SetExecutionRunStatus("applied")
 		if err != nil {
 			return err
 		}
@@ -101,7 +104,7 @@ func run() error {
 		}
 		fmt.Print(out)
 
-		runner.SetExecutionRunStatus("applied")
+		err = runner.SetExecutionRunStatus("applied")
 		if err != nil {
 			return err
 		}

@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/rancher/terraform-operator/pkg/cli/cmds"
+	"github.com/rancher/terraform-controller/pkg/cli/cmds"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )

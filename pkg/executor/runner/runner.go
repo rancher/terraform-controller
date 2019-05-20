@@ -8,10 +8,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rancher/terraform-operator/pkg/executor/terraform"
-	"github.com/rancher/terraform-operator/pkg/executor/writer"
-	"github.com/rancher/terraform-operator/pkg/git"
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/executor/terraform"
+	"github.com/rancher/terraform-controller/pkg/executor/writer"
+	batchcontroller "github.com/rancher/terraform-controller/pkg/generated/controllers/batch"
+	batchv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/batch/v1"
+	corecontroller "github.com/rancher/terraform-controller/pkg/generated/controllers/core"
+	corev1 "github.com/rancher/terraform-controller/pkg/generated/controllers/core/v1"
+	terraformcontroller "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
+	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/git"
 	"github.com/sirupsen/logrus"
 	coreV1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
@@ -28,30 +34,39 @@ or 'no' if not approved. If set to 'no' the job will exit without making any cha
 )
 
 type Runner struct {
-	Action       string
-	Namespace    string
-	ExecutionRun *v1.ExecutionRun
-	GitAuth      *git.Auth
-	K8sClient    *kubernetes.Clientset
-	OpClient     *v1.Clients
-	VarSecret    *coreV1.Secret
+	Action        string
+	Namespace     string
+	ExecutionRun  *v1.ExecutionRun
+	GitAuth       *git.Auth
+	K8sClient     *kubernetes.Clientset
+	executionRuns tfv1.ExecutionRunController
+	secrets       corev1.SecretController
+	jobs          batchv1.JobController
+	VarSecret     *coreV1.Secret
 }
 
 // NewRunner returns a runner with the k8s clients populated
 func NewRunner(config *rest.Config) (*Runner, error) {
 	var r Runner
-	client, err := kubernetes.NewForConfig(config)
+
+	tfFactory, err := terraformcontroller.NewFactoryFromConfig(config)
 	if err != nil {
-		return nil, err
+		logrus.Fatalf("Error building terraform controllers: %s", err.Error())
 	}
 
-	r.K8sClient = client
-	opClient, err := v1.NewForConfig(*config)
+	coreFactory, err := corecontroller.NewFactoryFromConfig(config)
 	if err != nil {
-		return nil, err
+		logrus.Fatalf("Error building terraform controllers: %s", err.Error())
 	}
 
-	r.OpClient = v1.NewClientsFromInterface(opClient)
+	batchFactory, err := batchcontroller.NewFactoryFromConfig(config)
+	if err != nil {
+		logrus.Fatalf("Error building terraform controllers: %s", err.Error())
+	}
+
+	r.executionRuns = tfFactory.Terraformcontroller().V1().ExecutionRun()
+	r.secrets = coreFactory.Core().V1().Secret()
+	r.jobs = batchFactory.Batch().V1().Job()
 
 	return &r, nil
 }
@@ -150,14 +165,14 @@ func (r *Runner) SaveOutputs() error {
 	}
 
 	return tryUpdate(func() error {
-		run, err := r.OpClient.ExecutionRun.Get(r.ExecutionRun.Namespace, r.ExecutionRun.Name, metaV1.GetOptions{})
+		run, err := r.executionRuns.Get(r.ExecutionRun.Namespace, r.ExecutionRun.Name, metaV1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		run.Status.Outputs = output
 
-		_, err = r.OpClient.ExecutionRun.Update(run)
+		_, err = r.executionRuns.Update(run)
 		if err != nil {
 			return err
 		}
@@ -207,6 +222,7 @@ func (r *Runner) Populate() error {
 	}
 
 	vSecret, err := r.getSecret(r.ExecutionRun.Spec.SecretName)
+
 	if err != nil {
 		return err
 	}
@@ -231,7 +247,7 @@ func (r *Runner) SetExecutionRunStatus(s string) error {
 			return fmt.Errorf("unknown execution run status: %v", s)
 		}
 
-		run, err = r.OpClient.ExecutionRun.Update(run)
+		run, err = r.executionRuns.Update(run)
 		if err != nil {
 			return err
 		}
@@ -258,6 +274,7 @@ func (r *Runner) WriteConfigFile() error {
 		return err
 	}
 
+	//err = writer.Write(jsonConfig, "/root/module/config.tf.json")
 	err = writer.Write(jsonConfig, "/root/module/config.tf.json")
 	if err != nil {
 		return err
@@ -284,7 +301,7 @@ func (r *Runner) DeleteJob() error {
 	delOptions := &metaV1.DeleteOptions{
 		PropagationPolicy: &prop,
 	}
-	return r.K8sClient.BatchV1().Jobs(r.Namespace).Delete(jobName, delOptions)
+	return r.jobs.Delete(r.Namespace, jobName, delOptions)
 }
 
 func (r *Runner) waitForApproval() (string, error) {
@@ -292,59 +309,51 @@ func (r *Runner) waitForApproval() (string, error) {
 	opts := metaV1.ListOptions{
 		TimeoutSeconds: &timeout,
 	}
-	watch, err := r.OpClient.ExecutionRun.Watch(opts)
+	watch, err := r.executionRuns.Watch(r.Namespace, opts)
 	if err != nil {
 		return "", err
 	}
 	defer watch.Stop()
 
+	logrus.Info("Waiting for results")
+
 	events := watch.ResultChan()
 
 	for {
-		select {
-		case event, ok := <-events:
-			if !ok {
-				// Lost the channel, could be timeout, reset the watch
-				break
-			}
+		var run *v1.ExecutionRun
+		event, ok := <-events
 
-			run, ok := event.Object.(*v1.ExecutionRun)
-			if !ok {
-				break
-			}
-
-			if run.Name != r.ExecutionRun.Name {
-				continue
-			}
-
-			approval, ok := run.Annotations["approved"]
-			logrus.Debugf("approval: %v, ok: %v, len: %v\n", approval, ok, len(approval))
-			if !ok || approval == "" || approval == " " {
-				continue
-			}
-
-			return approval, nil
+		if !ok {
+			// Lost the channel, could be timeout, reset the watch
+			logrus.Info("Channel results not ok, restarting watch.")
+			return r.waitForApproval()
 		}
 
-		logrus.Info("Restart watch")
-		// Reset the watch
-		watch.Stop()
-		watch, err = r.OpClient.ExecutionRun.Watch(opts)
-		if err != nil {
-			return "", err
+		if run, ok = event.Object.(*v1.ExecutionRun); !ok {
+			logrus.Info("Problems pulling Execution Run, restarting watch.")
+			return r.waitForApproval()
 		}
-		defer watch.Stop()
 
-		events = watch.ResultChan()
+		if run.Name != r.ExecutionRun.Name {
+			continue //wait longer
+		}
+
+		approval, ok := run.Annotations["approved"]
+		logrus.Debugf("approval: %v, ok: %v, len: %v\n", approval, ok, len(approval))
+		if !ok || strings.Trim(approval, " ") == "" {
+			continue //wait longer
+		}
+
+		return approval, nil
 	}
 }
 
 func (r *Runner) getExecutionRun(namespace, name string) (*v1.ExecutionRun, error) {
-	return r.OpClient.ExecutionRun.Get(namespace, name, metaV1.GetOptions{})
+	return r.executionRuns.Get(namespace, name, metaV1.GetOptions{})
 }
 
 func (r *Runner) getSecret(name string) (*coreV1.Secret, error) {
-	return r.K8sClient.CoreV1().Secrets(r.ExecutionRun.ObjectMeta.Namespace).Get(name, metaV1.GetOptions{})
+	return r.secrets.Get(r.ExecutionRun.ObjectMeta.Namespace, name, metaV1.GetOptions{})
 }
 
 func tryUpdate(f func() error) error {

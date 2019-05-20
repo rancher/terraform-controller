@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/urfave/cli"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -85,16 +85,16 @@ func deleteModule(c *cli.Context) error {
 }
 
 func getModuleList(namespace, kubeConfig string) (*v1.ModuleList, error) {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return nil, err
 	}
-	return clientSet.Module.List(namespace, metav1.ListOptions{})
+	return controllers.modules.List(namespace, metav1.ListOptions{})
 
 }
 
 func doModuleCreate(namespace, kubeConfig, name, url string) error {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return err
 	}
@@ -112,17 +112,17 @@ func doModuleCreate(namespace, kubeConfig, name, url string) error {
 	module.Namespace = namespace
 	module.Name = name
 
-	_, err = clientSet.Module.Create(module)
+	_, err = controllers.modules.Create(module)
 	return err
 }
 
 func doModuleDelete(namespace, kubeConfig, name string) error {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return err
 	}
 
-	return clientSet.Module.Delete(namespace, name, &metav1.DeleteOptions{})
+	return controllers.modules.Delete(namespace, name, &metav1.DeleteOptions{})
 }
 
 func getSimpleModuleTableHeader() []string {

@@ -1,8 +1,8 @@
 package cmds
 
 import (
-	"github.com/rancher/terraform-operator/pkg/controllers/execution"
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/terraform/execution"
 	"github.com/urfave/cli"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -129,7 +129,7 @@ func runExecution(c *cli.Context) error {
 	// Need to create something on the execution type to lock
 	execution.Spec.Version += 1
 
-	_, err = saveExecution(kubeConfig, execution)
+	_, err = saveExecution(kubeConfig, namespace, execution)
 	return err
 }
 
@@ -147,47 +147,48 @@ func deleteExecution(c *cli.Context) error {
 }
 
 func doExecutionDelete(namespace, kubeConfig, executionName string) error {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
+
 	if err != nil {
 		return err
 	}
-	return clientSet.Execution.Delete(namespace, executionName, &metav1.DeleteOptions{})
+	return controllers.executions.Delete(namespace, executionName, &metav1.DeleteOptions{})
 }
 
 func doExecutionCreate(namespace, kubeConfig string, execution *v1.Execution) error {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return err
 	}
 
 	execution.Namespace = namespace
 
-	_, err = clientSet.Execution.Create(execution)
+	_, err = controllers.executions.Create(execution)
 	return err
 }
 
 func getExecution(namespace, kubeConfig, executionName string) (*v1.Execution, error) {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return nil, err
 	}
-	return clientSet.Execution.Get(namespace, executionName, metav1.GetOptions{})
+	return controllers.executions.Get(namespace, executionName, metav1.GetOptions{})
 }
 
-func saveExecution(kubeConfig string, execution *v1.Execution) (*v1.Execution, error) {
-	clientSet, err := newV1Client(kubeConfig)
+func saveExecution(kubeConfig, namespace string, execution *v1.Execution) (*v1.Execution, error) {
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return nil, err
 	}
-	return clientSet.Execution.Update(execution)
+	return controllers.executions.Update(execution)
 }
 
 func getExecutionList(namespace, kubeConfig string) (*v1.ExecutionList, error) {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return nil, err
 	}
-	return clientSet.Execution.List(namespace, metav1.ListOptions{})
+	return controllers.executions.List(namespace, metav1.ListOptions{})
 }
 
 func getSimpleExecutionTableHeader() []string {
