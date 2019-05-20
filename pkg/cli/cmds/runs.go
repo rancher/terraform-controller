@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/urfave/cli"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -68,7 +68,7 @@ func approveRun(c *cli.Context) error {
 
 	run.Annotations["approved"] = "yes"
 
-	_, err = saveExecutionRun(kubeConfig, run)
+	_, err = saveExecutionRun(kubeConfig, namespace, run)
 	return err
 }
 
@@ -89,7 +89,7 @@ func denyRun(c *cli.Context) error {
 
 	run.Annotations["approved"] = "no"
 
-	_, err = saveExecutionRun(kubeConfig, run)
+	_, err = saveExecutionRun(kubeConfig, namespace, run)
 	return err
 }
 
@@ -98,12 +98,12 @@ func getSimpleRunTableHeader() []string {
 }
 
 func getRunList(namespace, kubeConfig string) (*v1.ExecutionRunList, error) {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	return clientSet.ExecutionRun.List(namespace, metav1.ListOptions{})
+	return controllers.executionRuns.List(namespace, metav1.ListOptions{})
 }
 
 func runsListToTableStrings(runs *v1.ExecutionRunList) [][]string {
@@ -125,20 +125,20 @@ func runsListToTableStrings(runs *v1.ExecutionRunList) [][]string {
 	return values
 }
 
-func saveExecutionRun(kubeConfig string, run *v1.ExecutionRun) (*v1.ExecutionRun, error) {
-	clientSet, err := newV1Client(kubeConfig)
+func saveExecutionRun(kubeConfig, namespace string, run *v1.ExecutionRun) (*v1.ExecutionRun, error) {
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	return clientSet.ExecutionRun.Update(run)
+	return controllers.executionRuns.Update(run)
 }
 
 func getRun(namespace, kubeConfig, name string) (*v1.ExecutionRun, error) {
-	clientSet, err := newV1Client(kubeConfig)
+	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	return clientSet.ExecutionRun.Get(namespace, name, metav1.GetOptions{})
+	return controllers.executionRuns.Get(namespace, name, metav1.GetOptions{})
 }

@@ -2,53 +2,57 @@ package module
 
 import (
 	"context"
-	"time"
-
 	"github.com/pkg/errors"
-	"github.com/rancher/terraform-operator/pkg/digest"
-	"github.com/rancher/terraform-operator/pkg/git"
-	"github.com/rancher/terraform-operator/pkg/interval"
-	"github.com/rancher/terraform-operator/types/apis/client"
-	corev1client "github.com/rancher/terraform-operator/types/apis/core/v1"
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/digest"
+	corev1 "github.com/rancher/terraform-controller/pkg/generated/controllers/core/v1"
+	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/git"
+	"github.com/rancher/terraform-controller/pkg/interval"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"time"
 )
 
-func Register(ctx context.Context, ns string, client *client.MasterClient) error {
-	fl := &handler{
-		ctx:           ctx,
-		modules:       client.Operator.Modules(""),
-		secretsLister: client.Core.Secrets("").Controller().Lister(),
+func NewHandler(ctx context.Context, modules tfv1.ModuleController, secrets corev1.SecretController) *handler {
+	return &handler{
+		ctx:     ctx,
+		modules: modules,
+		secrets: secrets,
 	}
-
-	client.Operator.Modules(ns).AddHandler(ctx, "module controller", fl.Handler)
-	return nil
 }
 
 type handler struct {
-	ctx           context.Context
-	modules       v1.ModuleInterface
-	secretsLister corev1client.SecretLister
+	ctx     context.Context
+	modules tfv1.ModuleController
+	secrets corev1.SecretController
 }
 
-func (h *handler) Handler(key string, obj *v1.Module) (robj runtime.Object, rerr error) {
-	if obj == nil {
+func (h *handler) OnChange(key string, module *v1.Module) (*v1.Module, error) {
+	if module == nil {
 		return nil, nil
 	}
 
-	if isPolling(obj.Spec) && needsUpdate(obj) {
-		return v1.ModuleConditionGitUpdated.Track(obj, h.modules, func() (runtime.Object, error) {
-			return h.updateCommit(obj)
-		})
+	if isPolling(module.Spec) && needsUpdate(module) {
+		v1.ModuleConditionGitUpdated.False(module)
+		return tfv1.UpdateModuleOnChange(func(module runtime.Object) (runtime.Object, error) {
+			v1.ModuleConditionGitUpdated.True(module)
+			return h.modules.Update(module.(*v1.Module))
+		}, h.updateCommit)(key, module)
+	}
+	//
+	hash := computeHash(module)
+	if module.Status.ContentHash != hash {
+		return h.updateHash(module, hash)
 	}
 
-	hash := computeHash(obj)
-	if obj.Status.ContentHash != hash {
-		return h.updateHash(obj, hash)
-	}
+	return h.modules.Update(module)
+	//return module, nil
+}
 
-	return obj, nil
+func (h *handler) OnRemove(key string, module *v1.Module) (*v1.Module, error) {
+	//nothing to do here
+	return module, nil
 }
 
 func (h *handler) updateHash(module *v1.Module, hash string) (*v1.Module, error) {
@@ -61,7 +65,7 @@ func (h *handler) updateHash(module *v1.Module, hash string) (*v1.Module, error)
 	return h.modules.Update(module)
 }
 
-func (h *handler) updateCommit(module *v1.Module) (*v1.Module, error) {
+func (h *handler) updateCommit(key string, module *v1.Module) (*v1.Module, error) {
 	branch := module.Spec.Git.Branch
 	if branch == "" {
 		branch = "master"
@@ -77,14 +81,12 @@ func (h *handler) updateCommit(module *v1.Module) (*v1.Module, error) {
 		return nil, err
 	}
 
-	// copy
 	gitChecked := module.Spec.Git
 	gitChecked.Commit = commit
-
-	module = module.DeepCopy()
 	module.Status.GitChecked = &gitChecked
 	module.Status.CheckTime = metav1.NewTime(time.Now())
-	return h.modules.Update(module)
+
+	return module, nil
 }
 
 func (h *handler) getAuth(ns string, spec v1.ModuleSpec) (git.Auth, error) {
@@ -95,7 +97,7 @@ func (h *handler) getAuth(ns string, spec v1.ModuleSpec) (git.Auth, error) {
 		return auth, nil
 	}
 
-	secret, err := h.secretsLister.Get(ns, name)
+	secret, err := h.secrets.Get(ns, name, metav1.GetOptions{})
 	if err != nil {
 		return auth, errors.Wrapf(err, "fetch git secret %s:", name)
 	}

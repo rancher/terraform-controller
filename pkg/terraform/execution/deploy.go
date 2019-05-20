@@ -7,11 +7,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
+
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/rancher/terraform-operator/pkg/digest"
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/digest"
 	"github.com/sirupsen/logrus"
 	batchV1 "k8s.io/api/batch/v1"
 	coreV1 "k8s.io/api/core/v1"
@@ -30,19 +32,23 @@ type Input struct {
 }
 
 // deployCreate creates all resources for the job to run terraform create and returns the run name
-func (e *executionLifecycle) deployCreate(execution *v1.Execution, input *Input, action string) (string, error) {
+func (h *handler) deployCreate(execution *v1.Execution, input *Input, action string) (string, error) {
+	logrus.Info("deploy create")
 	combinedVars := combineVars(input)
 	// Always set the key for the k8s backend
 	combinedVars["key"] = execution.Name
 
 	jsonVars, err := json.Marshal(combinedVars)
+
+	logrus.Info(string(jsonVars))
+
 	if err != nil {
 		return "", err
 	}
 
 	name := createExecRunAndSecretName(execution, combinedVars, input.Module.Status.ContentHash)
 
-	match, err := e.runsMatch(execution, input, jsonVars)
+	match, err := h.runsMatch(execution, input, jsonVars)
 	if err != nil {
 		return "", err
 	}
@@ -55,7 +61,7 @@ func (e *executionLifecycle) deployCreate(execution *v1.Execution, input *Input,
 
 	or := []metaV1.OwnerReference{
 		metaV1.OwnerReference{
-			APIVersion: "terraform-operator.cattle.io/v1",
+			APIVersion: "terraform-controller.cattle.io/v1",
 			Kind:       "Execution",
 			Name:       execution.Name,
 			UID:        execution.UID,
@@ -63,37 +69,37 @@ func (e *executionLifecycle) deployCreate(execution *v1.Execution, input *Input,
 	}
 
 	logrus.Debug("Create - Creating executionRun")
-	_, err = e.createExecutionRun(or, execution, name, input)
+	_, err = h.createExecutionRun(or, execution, name, input)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Create - Creating secret")
-	_, err = e.createSecretForVariablesFile(or, name, execution, jsonVars)
+	_, err = h.createSecretForVariablesFile(or, name, execution, jsonVars)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Create - Creating serviceAccount")
-	sa, err := e.createServiceAccount(or, name, namespace)
+	sa, err := h.createServiceAccount(or, name, namespace)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Create - Creating clusterRoleBinding")
-	rb, err := e.createClusterRoleBinding(or, name, "cluster-admin", sa.Name, namespace)
+	rb, err := h.createClusterRoleBinding(or, name, "cluster-admin", sa.Name, namespace)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Create - Creating job")
-	job, err := e.createJob(or, input, name, action, sa.Name, namespace)
+	job, err := h.createJob(or, input, name, action, sa.Name, namespace)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("CreateUpdating owner references")
-	err = e.updateOwnerReference(job, []interface{}{sa, rb}, namespace)
+	err = h.updateOwnerReference(job, []interface{}{sa, rb}, namespace)
 	if err != nil {
 		return "", err
 	}
@@ -104,7 +110,7 @@ func (e *executionLifecycle) deployCreate(execution *v1.Execution, input *Input,
 }
 
 // deployCreate creates all resources for the job to run terraform destroy
-func (e *executionLifecycle) deployDestroy(execution *v1.Execution, input *Input, action string) (string, error) {
+func (h *handler) deployDestroy(execution *v1.Execution, input *Input, action string) (string, error) {
 	combinedVars := combineVars(input)
 	// Always set the key for the k8s backend
 	combinedVars["key"] = execution.Name
@@ -122,37 +128,37 @@ func (e *executionLifecycle) deployDestroy(execution *v1.Execution, input *Input
 	or := []metaV1.OwnerReference{}
 
 	logrus.Debug("Destroy - Creating executionRun")
-	_, err = e.createExecutionRun(or, execution, name, input)
+	_, err = h.createExecutionRun(or, execution, name, input)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Destroy - Creating secret")
-	secret, err := e.createSecretForVariablesFile(or, name, execution, jsonVars)
+	secret, err := h.createSecretForVariablesFile(or, name, execution, jsonVars)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Destroy - Creating serviceAccount")
-	sa, err := e.createServiceAccount(or, name, namespace)
+	sa, err := h.createServiceAccount(or, name, namespace)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Destroy - Creating clusterRoleBinding")
-	rb, err := e.createClusterRoleBinding(or, name, "cluster-admin", sa.Name, namespace)
+	rb, err := h.createClusterRoleBinding(or, name, "cluster-admin", sa.Name, namespace)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Destroy - Creating job")
-	job, err := e.createJob(or, input, name, action, sa.Name, namespace)
+	job, err := h.createJob(or, input, name, action, sa.Name, namespace)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Destroy - Updating owner references")
-	err = e.updateOwnerReference(job, []interface{}{sa, rb, secret}, namespace)
+	err = h.updateOwnerReference(job, []interface{}{sa, rb, secret}, namespace)
 	if err != nil {
 		return "", err
 	}
@@ -163,8 +169,12 @@ func (e *executionLifecycle) deployDestroy(execution *v1.Execution, input *Input
 }
 
 // runsMatch checks the previous run with the incoming to determine if the job should be executed again
-func (e *executionLifecycle) runsMatch(execution *v1.Execution, input *Input, jsonVars []byte) (bool, error) {
-	prevExecutionRun, err := e.executionRunLister.Get(execution.ObjectMeta.Namespace, execution.Status.ExecutionRunName)
+func (h *handler) runsMatch(execution *v1.Execution, input *Input, jsonVars []byte) (bool, error) {
+	if execution.Status.ExecutionRunName == "" {
+		return false, nil
+	}
+
+	prevExecutionRun, err := h.executionRuns.Get(execution.ObjectMeta.Namespace, execution.Status.ExecutionRunName, metaV1.GetOptions{})
 	if err != nil {
 		if !k8sError.IsNotFound(err) {
 			return false, err
@@ -180,7 +190,7 @@ func (e *executionLifecycle) runsMatch(execution *v1.Execution, input *Input, js
 		return false, nil
 	}
 
-	varChange, err := e.varsChanged(jsonVars, prevExecutionRun)
+	varChange, err := h.varsChanged(jsonVars, prevExecutionRun)
 	if err != nil {
 		return false, err
 	}
@@ -194,8 +204,8 @@ func (e *executionLifecycle) runsMatch(execution *v1.Execution, input *Input, js
 }
 
 // varsChanged returns true if the vars have changed since the last run
-func (e *executionLifecycle) varsChanged(vars []byte, run *v1.ExecutionRun) (bool, error) {
-	oldSecret, err := e.secretsLister.Get(run.ObjectMeta.Namespace, run.Spec.SecretName)
+func (h *handler) varsChanged(vars []byte, run *v1.ExecutionRun) (bool, error) {
+	oldSecret, err := h.secrets.Get(run.ObjectMeta.Namespace, run.Spec.SecretName, metaV1.GetOptions{})
 	if err != nil {
 		if !k8sError.IsNotFound(err) {
 			return false, err
@@ -211,7 +221,7 @@ func (e *executionLifecycle) varsChanged(vars []byte, run *v1.ExecutionRun) (boo
 	return true, nil
 }
 
-func (e *executionLifecycle) createExecutionRun(
+func (h *handler) createExecutionRun(
 	or []metaV1.OwnerReference,
 	execution *v1.Execution,
 	name string,
@@ -234,19 +244,19 @@ func (e *executionLifecycle) createExecutionRun(
 		},
 	}
 
-	run, err := e.executionRuns.Create(execRun)
+	run, err := h.executionRuns.Create(execRun)
 	if err != nil {
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
 
-		return e.executionRuns.GetNamespaced(execution.Namespace, name, metaV1.GetOptions{})
+		return h.executionRuns.Get(execution.Namespace, name, metaV1.GetOptions{})
 
 	}
 	return run, nil
 }
 
-func (e *executionLifecycle) createSecretForVariablesFile(or []metaV1.OwnerReference, name string, execution *v1.Execution, vars []byte) (*coreV1.Secret, error) {
+func (h *handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name string, execution *v1.Execution, vars []byte) (*coreV1.Secret, error) {
 	secretData := map[string][]byte{
 		"varFile": vars,
 	}
@@ -260,23 +270,24 @@ func (e *executionLifecycle) createSecretForVariablesFile(or []metaV1.OwnerRefer
 		Data: secretData,
 	}
 
-	s, err := e.secrets.Create(secret)
+	s, err := h.secrets.Create(secret)
 	if err != nil {
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
 
-		return e.secrets.GetNamespaced(execution.Namespace, secret.Name, metaV1.GetOptions{})
+		return h.secrets.Get(execution.Namespace, secret.Name, metaV1.GetOptions{})
 	}
 	return s, nil
 }
 
-func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, input *Input, runName, action, sa, namespace string) (*batchV1.Job, error) {
+func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, action, sa, namespace string) (*batchV1.Job, error) {
 	createEnvForJob(input, action, runName, namespace)
 
 	meta := metaV1.ObjectMeta{
-		Name:            "job-" + runName,
-		Namespace:       namespace,
+		Name:      "job-" + runName,
+		Namespace: namespace,
+
 		OwnerReferences: or,
 	}
 
@@ -294,7 +305,7 @@ func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, input *Input,
 							Name:            "agent",
 							Image:           input.Image,
 							Env:             input.EnvVars,
-							ImagePullPolicy: coreV1.PullAlways,
+							ImagePullPolicy: coreV1.PullNever,
 						},
 					},
 					RestartPolicy: "OnFailure",
@@ -303,58 +314,18 @@ func (e *executionLifecycle) createJob(or []metaV1.OwnerReference, input *Input,
 		},
 	}
 
-	job, err := e.jobs.Create(j)
+	job, err := h.jobs.Create(j)
 	if err != nil {
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
-		return e.jobs.GetNamespaced(namespace, j.Name, metaV1.GetOptions{})
+		return h.jobs.Get(namespace, j.Name, metaV1.GetOptions{})
 	}
 
 	return job, nil
 }
 
-// TODO: This isn't used yet, 'admin' will be replaced with this customized role for the job
-func (e *executionLifecycle) createClusterRole(name string) (*rbacV1.ClusterRole, error) {
-	meta := metaV1.ObjectMeta{
-		Name: "cr-" + name,
-	}
-
-	rules := []rbacV1.PolicyRule{
-		// This is needed to check for cattle-system, remove finalizers and delete
-		rbacV1.PolicyRule{
-			Verbs:     []string{"list", "get", "update", "delete"},
-			APIGroups: []string{""},
-			Resources: []string{"namespaces"},
-		},
-		rbacV1.PolicyRule{
-			Verbs:     []string{"list", "get", "delete"},
-			APIGroups: []string{"rbac.authorization.k8s.io"},
-			Resources: []string{"roles", "rolebindings", "clusterroles", "clusterrolebindings"},
-		},
-		// The job is going to delete itself after running to trigger ownerReference
-		// cleanup of the clusterRole, serviceAccount and clusterRoleBinding
-		rbacV1.PolicyRule{
-			Verbs:     []string{"list", "get", "delete"},
-			APIGroups: []string{"batch"},
-			Resources: []string{"jobs"},
-		},
-	}
-	clusterRole := rbacV1.ClusterRole{
-		ObjectMeta: meta,
-		Rules:      rules,
-	}
-	_, err := e.clusterRoles.Create(&clusterRole)
-	if err != nil {
-		if !k8sError.IsAlreadyExists(err) {
-			return nil, err
-		}
-		return e.clusterRoles.Get(clusterRole.Name, metaV1.GetOptions{})
-	}
-	return nil, nil
-}
-
-func (e *executionLifecycle) createServiceAccount(or []metaV1.OwnerReference, name, namespace string) (*coreV1.ServiceAccount, error) {
+func (h *handler) createServiceAccount(or []metaV1.OwnerReference, name, namespace string) (*coreV1.ServiceAccount, error) {
 	meta := metaV1.ObjectMeta{
 		Name:            "sa-" + name,
 		Namespace:       namespace,
@@ -363,17 +334,17 @@ func (e *executionLifecycle) createServiceAccount(or []metaV1.OwnerReference, na
 	serviceAccount := coreV1.ServiceAccount{
 		ObjectMeta: meta,
 	}
-	sa, err := e.serviceAccounts.Create(&serviceAccount)
+	sa, err := h.serviceAccounts.Create(&serviceAccount)
 	if err != nil {
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
-		return e.serviceAccounts.GetNamespaced(namespace, serviceAccount.Name, metaV1.GetOptions{})
+		return h.serviceAccounts.Get(namespace, serviceAccount.Name, metaV1.GetOptions{})
 	}
 	return sa, nil
 }
 
-func (e *executionLifecycle) createClusterRoleBinding(or []metaV1.OwnerReference, name, role, sa, namespace string) (*rbacV1.ClusterRoleBinding, error) {
+func (h *handler) createClusterRoleBinding(or []metaV1.OwnerReference, name, role, sa, namespace string) (*rbacV1.ClusterRoleBinding, error) {
 	meta := metaV1.ObjectMeta{
 		Name:            "crb-" + name,
 		OwnerReferences: or,
@@ -394,18 +365,18 @@ func (e *executionLifecycle) createClusterRoleBinding(or []metaV1.OwnerReference
 		},
 	}
 
-	rb, err := e.clusterRoleBindings.Create(&clusterRoleBinding)
+	rb, err := h.clusterRoleBindings.Create(&clusterRoleBinding)
 	if err != nil {
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
-		return e.clusterRoleBindings.Get(clusterRoleBinding.Name, metaV1.GetOptions{})
+		return h.clusterRoleBindings.Get(clusterRoleBinding.Name, metaV1.GetOptions{})
 	}
 	return rb, nil
 }
 
 // updateOwnerReference ties the passed in objs to a job
-func (e *executionLifecycle) updateOwnerReference(job *batchV1.Job, objs []interface{}, namespace string) error {
+func (h *handler) updateOwnerReference(job *batchV1.Job, objs []interface{}, namespace string) error {
 	or := []metaV1.OwnerReference{
 		metaV1.OwnerReference{
 			APIVersion: "batch/v1",
@@ -421,12 +392,12 @@ func (e *executionLifecycle) updateOwnerReference(job *batchV1.Job, objs []inter
 		switch v := obj.(type) {
 		case *v1.ExecutionRun:
 			err = tryUpdate(func() error {
-				run, err := e.executionRuns.GetNamespaced(namespace, v.Name, metaV1.GetOptions{})
+				run, err := h.executionRuns.Get(namespace, v.Name, metaV1.GetOptions{})
 				if err != nil {
 					return errors.WithMessage(err, "failed executionRun get")
 				}
 				run.OwnerReferences = or
-				_, err = e.executionRuns.Update(run)
+				_, err = h.executionRuns.Update(run)
 				if err != nil {
 					return errors.WithMessage(err, "failed executionRun update")
 				}
@@ -434,13 +405,13 @@ func (e *executionLifecycle) updateOwnerReference(job *batchV1.Job, objs []inter
 			})
 		case *coreV1.Secret:
 			err = tryUpdate(func() error {
-				secret, err := e.secrets.GetNamespaced(namespace, v.Name, metaV1.GetOptions{})
+				secret, err := h.secrets.Get(namespace, v.Name, metaV1.GetOptions{})
 				if err != nil {
 					return errors.WithMessage(err, "failed secret get")
 				}
 				secret.OwnerReferences = or
 
-				_, err = e.secrets.Update(secret)
+				_, err = h.secrets.Update(secret)
 				if err != nil {
 					return errors.WithMessage(err, "failed secret update")
 				}
@@ -448,13 +419,13 @@ func (e *executionLifecycle) updateOwnerReference(job *batchV1.Job, objs []inter
 			})
 		case *coreV1.ServiceAccount:
 			err = tryUpdate(func() error {
-				sa, err := e.serviceAccounts.GetNamespaced(namespace, v.Name, metaV1.GetOptions{})
+				sa, err := h.serviceAccounts.Get(namespace, v.Name, metaV1.GetOptions{})
 				if err != nil {
 					return errors.WithMessage(err, "failed serviceAccount get")
 				}
 				sa.OwnerReferences = or
 
-				_, err = e.serviceAccounts.Update(sa)
+				_, err = h.serviceAccounts.Update(sa)
 				if err != nil {
 					return errors.WithMessage(err, "failed serviceAccount update")
 				}
@@ -462,13 +433,13 @@ func (e *executionLifecycle) updateOwnerReference(job *batchV1.Job, objs []inter
 			})
 		case *rbacV1.ClusterRole:
 			err = tryUpdate(func() error {
-				role, err := e.clusterRoles.Get(v.Name, metaV1.GetOptions{})
+				role, err := h.clusterRoles.Get(v.Name, metaV1.GetOptions{})
 				if err != nil {
 					return errors.WithMessage(err, "failed clusterRole get")
 				}
 				role.OwnerReferences = or
 
-				_, err = e.clusterRoles.Update(role)
+				_, err = h.clusterRoles.Update(role)
 				if err != nil {
 					return errors.WithMessage(err, "failed clusterRole update")
 				}
@@ -476,13 +447,13 @@ func (e *executionLifecycle) updateOwnerReference(job *batchV1.Job, objs []inter
 			})
 		case *rbacV1.ClusterRoleBinding:
 			err = tryUpdate(func() error {
-				binding, err := e.clusterRoleBindings.Get(v.Name, metaV1.GetOptions{})
+				binding, err := h.clusterRoleBindings.Get(v.Name, metaV1.GetOptions{})
 				if err != nil {
 					return errors.WithMessage(err, "failed clusterRoleBinding get")
 				}
 				binding.OwnerReferences = or
 
-				_, err = e.clusterRoleBindings.Update(binding)
+				_, err = h.clusterRoleBindings.Update(binding)
 				if err != nil {
 					return errors.WithMessage(err, "failed clusterRoleBinding update")
 				}
@@ -551,9 +522,15 @@ func createExecRunAndSecretName(execution *v1.Execution, vars map[string]string,
 	}
 
 	hash := sha256.New()
-	hash.Write([]byte(varHash))
-	hash.Write([]byte(h))
-	hash.Write(buf.Bytes())
+	if _, err := hash.Write([]byte(varHash)); err != nil {
+		logrus.Error("Failed to write to digest")
+	}
+	if _, err := hash.Write([]byte(h)); err != nil {
+		logrus.Error("Failed to write to digest")
+	}
+	if _, err := hash.Write(buf.Bytes()); err != nil {
+		logrus.Error("Failed to write to digest")
+	}
 
 	encoding := hex.EncodeToString(hash.Sum(nil))[:10]
 

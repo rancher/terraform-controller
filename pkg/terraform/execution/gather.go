@@ -3,20 +3,22 @@ package execution
 import (
 	"fmt"
 
-	"github.com/rancher/terraform-operator/types/apis/terraform-operator.cattle.io/v1"
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/sirupsen/logrus"
 
 	coreV1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error) {
+func (h *handler) gatherInput(obj *v1.Execution) (*Input, bool, error) {
 	var (
 		ns   = obj.Namespace
 		spec = obj.Spec
 	)
-	logrus.Debug("Getting module")
-	mod, err := e.moduleLister.Get(ns, spec.ModuleName)
+
+	mod, err := h.modules.Get(ns, spec.ModuleName, metaV1.GetOptions{})
+
 	if err != nil {
 		if k8sError.IsNotFound(err) {
 			return nil, false, nil
@@ -27,27 +29,28 @@ func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error
 	if mod.Status.ContentHash == "" {
 		return nil, false, nil
 	}
-	logrus.Debug("Getting secrets")
 
-	secrets, ok, err := e.getSecrets(ns, spec)
-	if !ok || err != nil {
-		return nil, false, err
-	}
-	logrus.Debug("Getting configs")
-
-	configs, ok, err := e.getConfigs(ns, spec)
-	if !ok || err != nil {
-		return nil, false, err
-	}
-	logrus.Debug("Getting executions")
-
-	executions, ok, err := e.getExecutions(ns, spec)
+	secrets, ok, err := h.getSecrets(ns, spec)
+	logrus.Debug(secrets)
 	if !ok || err != nil {
 		return nil, false, err
 	}
 
-	envVars, ok, err := e.getEnvVars(ns, spec)
+	configs, ok, err := h.getConfigs(ns, spec)
 	if !ok || err != nil {
+		logrus.Debug("Pulling Executions Failed.")
+		return nil, false, err
+	}
+
+	executions, ok, err := h.getExecutions(ns, spec)
+	if !ok || err != nil {
+		logrus.Debug("Pulling Executions Failed.")
+		return nil, false, err
+	}
+
+	envVars, ok, err := h.getEnvVars(ns, spec)
+	if !ok || err != nil {
+		logrus.Debug("Pulling Environment Variables Failed.")
 		return nil, false, err
 	}
 
@@ -61,11 +64,11 @@ func (e *executionLifecycle) gatherInput(obj *v1.Execution) (*Input, bool, error
 	}, true, nil
 }
 
-func (e *executionLifecycle) getSecrets(ns string, spec v1.ExecutionSpec) ([]*coreV1.Secret, bool, error) {
+func (h *handler) getSecrets(ns string, spec v1.ExecutionSpec) ([]*coreV1.Secret, bool, error) {
 	var secrets []*coreV1.Secret
 
 	for _, name := range spec.Variables.SecretNames {
-		secret, err := e.secretsLister.Get(ns, name)
+		secret, err := h.secrets.Get(ns, name, metaV1.GetOptions{})
 		if k8sError.IsNotFound(err) {
 			return secrets, false, nil
 		} else if err != nil {
@@ -78,11 +81,11 @@ func (e *executionLifecycle) getSecrets(ns string, spec v1.ExecutionSpec) ([]*co
 	return secrets, true, nil
 }
 
-func (e *executionLifecycle) getConfigs(ns string, spec v1.ExecutionSpec) ([]*coreV1.ConfigMap, bool, error) {
+func (h *handler) getConfigs(ns string, spec v1.ExecutionSpec) ([]*coreV1.ConfigMap, bool, error) {
 	var configMaps []*coreV1.ConfigMap
 
 	for _, name := range spec.Variables.ConfigNames {
-		configMap, err := e.configMapLister.Get(ns, name)
+		configMap, err := h.configMaps.Get(ns, name, metaV1.GetOptions{})
 		if k8sError.IsNotFound(err) {
 			return configMaps, false, nil
 		} else if err != nil {
@@ -95,10 +98,10 @@ func (e *executionLifecycle) getConfigs(ns string, spec v1.ExecutionSpec) ([]*co
 	return configMaps, true, nil
 }
 
-func (e *executionLifecycle) getExecutions(ns string, spec v1.ExecutionSpec) (map[string]string, bool, error) {
+func (h *handler) getExecutions(ns string, spec v1.ExecutionSpec) (map[string]string, bool, error) {
 	result := map[string]string{}
 	for dataName, execName := range spec.Data {
-		execution, err := e.executionLister.Get(ns, execName)
+		execution, err := h.executions.Get(ns, execName, metaV1.GetOptions{})
 		if k8sError.IsNotFound(err) {
 			return result, false, nil
 		} else if err != nil {
@@ -115,14 +118,18 @@ func (e *executionLifecycle) getExecutions(ns string, spec v1.ExecutionSpec) (ma
 	return result, true, nil
 }
 
-func (e *executionLifecycle) getEnvVars(ns string, spec v1.ExecutionSpec) ([]coreV1.EnvVar, bool, error) {
+func (h *handler) getEnvVars(ns string, spec v1.ExecutionSpec) ([]coreV1.EnvVar, bool, error) {
 	result := []coreV1.EnvVar{}
 
+	logrus.Debugf("Pulling Vars from Secrets: %d", len(spec.Variables.EnvSecretNames))
 	for _, name := range spec.Variables.EnvSecretNames {
-		secret, err := e.secretsLister.Get(ns, name)
+		logrus.Debugf("Secret: %s", name)
+		secret, err := h.secrets.Get(ns, name, metaV1.GetOptions{})
 		if k8sError.IsNotFound(err) {
+			logrus.Debugf("Not Found: %s", name)
 			return result, false, nil
 		} else if err != nil {
+			logrus.Debugf("Error: %s", name)
 			return result, false, err
 		}
 
@@ -135,11 +142,15 @@ func (e *executionLifecycle) getEnvVars(ns string, spec v1.ExecutionSpec) ([]cor
 		}
 	}
 
+	logrus.Debugf("Pulling Env Vars from Config Maps: %d", len(spec.Variables.EnvConfigName))
 	for _, name := range spec.Variables.EnvConfigName {
-		config, err := e.configMapLister.Get(ns, name)
+		logrus.Debugf("Env Var: %s", name)
+		config, err := h.configMaps.Get(ns, name, metaV1.GetOptions{})
 		if k8sError.IsNotFound(err) {
+			logrus.Debugf("Not Found: %s", name)
 			return result, false, nil
 		} else if err != nil {
+			logrus.Debugf("Error: %s", name)
 			return result, false, err
 		}
 
