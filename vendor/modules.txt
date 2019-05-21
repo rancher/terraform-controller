@@ -47,6 +47,13 @@ github.com/rancher/wrangler/pkg/controller-gen/args
 github.com/rancher/wrangler/pkg/cleanup
 github.com/rancher/wrangler/pkg/generic
 github.com/rancher/wrangler/pkg/controller-gen/generators
+# github.com/rancher/wrangler-api v0.1.1
+github.com/rancher/wrangler-api/pkg/generated/controllers/batch
+github.com/rancher/wrangler-api/pkg/generated/controllers/core
+github.com/rancher/wrangler-api/pkg/generated/controllers/rbac
+github.com/rancher/wrangler-api/pkg/generated/controllers/batch/v1
+github.com/rancher/wrangler-api/pkg/generated/controllers/core/v1
+github.com/rancher/wrangler-api/pkg/generated/controllers/rbac/v1
 # github.com/sirupsen/logrus v1.4.1
 github.com/sirupsen/logrus
 # github.com/spf13/pflag v0.0.0-20170130214245-9ff6c6923cff
@@ -103,8 +110,8 @@ gopkg.in/inf.v0
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
 # k8s.io/api v0.0.0-20190409021203-6e4e0e4f393b
-k8s.io/api/batch/v1
 k8s.io/api/core/v1
+k8s.io/api/batch/v1
 k8s.io/api/rbac/v1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/apps/v1
@@ -191,20 +198,11 @@ k8s.io/client-go/discovery
 k8s.io/client-go/util/flowcontrol
 k8s.io/client-go/discovery/fake
 k8s.io/client-go/testing
+k8s.io/client-go/tools/cache
 k8s.io/client-go/informers
 k8s.io/client-go/informers/batch
-k8s.io/client-go/informers/batch/v1
-k8s.io/client-go/kubernetes/typed/batch/v1
-k8s.io/client-go/listers/batch/v1
-k8s.io/client-go/tools/cache
 k8s.io/client-go/informers/core
-k8s.io/client-go/informers/core/v1
-k8s.io/client-go/kubernetes/typed/core/v1
-k8s.io/client-go/listers/core/v1
 k8s.io/client-go/informers/rbac
-k8s.io/client-go/informers/rbac/v1
-k8s.io/client-go/kubernetes/typed/rbac/v1
-k8s.io/client-go/listers/rbac/v1
 k8s.io/client-go/tools/auth
 k8s.io/client-go/tools/clientcmd/api
 k8s.io/client-go/tools/clientcmd/api/latest
@@ -215,6 +213,12 @@ k8s.io/client-go/rest/watch
 k8s.io/client-go/tools/metrics
 k8s.io/client-go/transport
 k8s.io/client-go/util/cert
+k8s.io/client-go/informers/batch/v1
+k8s.io/client-go/kubernetes/typed/batch/v1
+k8s.io/client-go/listers/batch/v1
+k8s.io/client-go/informers/core/v1
+k8s.io/client-go/kubernetes/typed/core/v1
+k8s.io/client-go/listers/core/v1
 k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1
 k8s.io/client-go/kubernetes/typed/apps/v1
 k8s.io/client-go/kubernetes/typed/apps/v1beta1
@@ -239,6 +243,7 @@ k8s.io/client-go/kubernetes/typed/networking/v1beta1
 k8s.io/client-go/kubernetes/typed/node/v1alpha1
 k8s.io/client-go/kubernetes/typed/node/v1beta1
 k8s.io/client-go/kubernetes/typed/policy/v1beta1
+k8s.io/client-go/kubernetes/typed/rbac/v1
 k8s.io/client-go/kubernetes/typed/rbac/v1alpha1
 k8s.io/client-go/kubernetes/typed/rbac/v1beta1
 k8s.io/client-go/kubernetes/typed/scheduling/v1
@@ -250,6 +255,10 @@ k8s.io/client-go/kubernetes/typed/storage/v1alpha1
 k8s.io/client-go/kubernetes/typed/storage/v1beta1
 k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/util/workqueue
+k8s.io/client-go/tools/pager
+k8s.io/client-go/util/retry
+k8s.io/client-go/informers/rbac/v1
+k8s.io/client-go/listers/rbac/v1
 k8s.io/client-go/informers/admissionregistration
 k8s.io/client-go/informers/apps
 k8s.io/client-go/informers/auditregistration
@@ -267,9 +276,6 @@ k8s.io/client-go/informers/settings
 k8s.io/client-go/informers/storage
 k8s.io/client-go/informers/batch/v1beta1
 k8s.io/client-go/informers/batch/v2alpha1
-k8s.io/client-go/tools/pager
-k8s.io/client-go/util/retry
-k8s.io/client-go/tools/reference
 k8s.io/client-go/informers/rbac/v1alpha1
 k8s.io/client-go/informers/rbac/v1beta1
 k8s.io/client-go/tools/clientcmd/api/v1
@@ -278,6 +284,7 @@ k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1
 k8s.io/client-go/pkg/apis/clientauthentication/v1beta1
 k8s.io/client-go/util/connrotation
 k8s.io/client-go/util/keyutil
+k8s.io/client-go/tools/reference
 k8s.io/client-go/informers/admissionregistration/v1beta1
 k8s.io/client-go/informers/apps/v1
 k8s.io/client-go/informers/apps/v1beta1
