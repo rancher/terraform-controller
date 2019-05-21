@@ -302,10 +302,9 @@ func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, a
 					ServiceAccountName: sa,
 					Containers: []coreV1.Container{
 						coreV1.Container{
-							Name:            "agent",
-							Image:           input.Image,
-							Env:             input.EnvVars,
-							ImagePullPolicy: coreV1.PullNever,
+							Name:  "agent",
+							Image: input.Image,
+							Env:   input.EnvVars,
 						},
 					},
 					RestartPolicy: "OnFailure",

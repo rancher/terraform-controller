@@ -18,8 +18,7 @@ spec:
     spec:
       serviceAccountName: terraform-controller
       containers:
-        - image: rancher/terraform-controller:dev
-          imagePullPolicy: Never
+        - image: rancher/terraform-controller:latest
           name: terraform-controller
           command: ["terraform-controller"]
           args: ["--namespace", "terraform-controller"]
