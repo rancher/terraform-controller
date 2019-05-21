@@ -20,21 +20,21 @@ steps:
   settings:
     api_key:
       from_secret: github_token
-    prerelease: true
     checksum:
     - sha256
     checksum_file: CHECKSUMsum-amd64.txt
     checksum_flatten: true
     files:
     - "dist/artifacts/*"
+    prerelease: true
   when:
+    event:
+    - tag
     instance:
     - drone-publish.rancher.io
     ref:
     - refs/head/master
-    - refs/tags/*
-    event:
-    - tag
+    - "refs/tags/*"
 
 - name: docker-publish
   image: plugins/docker
@@ -42,18 +42,18 @@ steps:
     dockerfile: package/Dockerfile
     password:
       from_secret: docker_password
-    repo: "rancher/terraform-controller"
+    repo: rancher/terraform-controller
     tag: "${DRONE_TAG}-amd64"
     username:
       from_secret: docker_username
   when:
+    event:
+    - tag
     instance:
     - drone-publish.rancher.io
     ref:
     - refs/head/master
-    - refs/tags/*
-    event:
-    - tag
+    - "refs/tags/*"
 
 volumes:
 - name: docker
@@ -82,21 +82,21 @@ steps:
   settings:
     api_key:
       from_secret: github_token
-    prerelease: true
     checksum:
     - sha256
     checksum_file: CHECKSUMsum-arm64.txt
     checksum_flatten: true
     files:
     - "dist/artifacts/*"
+    prerelease: true
   when:
+    event:
+    - tag
     instance:
     - drone-publish.rancher.io
     ref:
     - refs/head/master
-    - refs/tags/*
-    event:
-    - tag
+    - "refs/tags/*"
 
 - name: docker-publish
   image: plugins/docker
@@ -104,18 +104,18 @@ steps:
     dockerfile: package/Dockerfile
     password:
       from_secret: docker_password
-    repo: "rancher/terraform-controller"
+    repo: rancher/terraform-controller
     tag: "${DRONE_TAG}-arm64"
     username:
       from_secret: docker_username
   when:
+    event:
+    - tag
     instance:
     - drone-publish.rancher.io
     ref:
     - refs/head/master
-    - refs/tags/*
-    event:
-    - tag
+    - "refs/tags/*"
 
 volumes:
 - name: docker
@@ -144,40 +144,40 @@ steps:
   settings:
     api_key:
       from_secret: github_token
-    prerelease: true
     checksum:
     - sha256
     checksum_file: CHECKSUMsum-arm.txt
     checksum_flatten: true
     files:
     - "dist/artifacts/*"
+    prerelease: true
   when:
+    event:
+    - tag
     instance:
     - drone-publish.rancher.io
     ref:
     - refs/head/master
-    - refs/tags/*
-    event:
-    - tag
+    - "refs/tags/*"
 
 - name: docker-publish
   image: plugins/docker
   settings:
     dockerfile: package/Dockerfile
-    repo: "rancher/terraform-controller"
+    password:
+      from_secret: docker_password
+    repo: rancher/terraform-controller
     tag: "${DRONE_TAG}-arm"
     username:
       from_secret: docker_username
-    password:
-      from_secret: docker_password
   when:
+    event:
+    - tag
     instance:
     - drone-publish.rancher.io
     ref:
     - refs/head/master
-    - refs/tags/*
-    event:
-    - tag
+    - "refs/tags/*"
 
 volumes:
 - name: docker
@@ -185,122 +185,121 @@ volumes:
     path: /var/run/docker.sock
 
 ---
+
+platform:
+  os: linux
+  arch: amd64
+
 steps:
-  - name: build
-    pull: default
-    image: rancher/dapper:v0.4.1
-    commands:
-      - dapper ci
-    privileged: true
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
+- name: build
+  pull: default
+  image: rancher/dapper:v0.4.1
+  commands:
+  - dapper ci
+  privileged: true
+  volumes:
+  - name: docker
+    path: /var/run/docker.sock
 
-  - name: stage-binaries
-    pull: default
-    image: rancher/dapper:v0.4.1
-    commands:
-      - "cp -r ./bin/* ./package/"
-    when:
-      event:
-        - tag
+- name: stage-binaries
+  pull: default
+  image: rancher/dapper:v0.4.1
+  commands:
+  - "cp -r ./bin/* ./package/"
+  when:
+    event:
+    - tag
 
-  - name: publish-terraform-controller-image
-    pull: default
-    image: plugins/docker
-    settings:
-      context: package/
-      dockerfile: package/Dockerfile.controller
-      repo: rancher/terraform-controller
-      tag: "${DRONE_TAG}"
-      password:
-        from_secret: docker_password
-      username:
-        from_secret: docker_username
-    when:
-      refs:
-        - refs/tags/v*
-      event:
-        - tag
+- name: publish-terraform-controller-image
+  pull: default
+  image: plugins/docker
+  settings:
+    context: package/
+    dockerfile: package/Dockerfile.controller
+    password:
+      from_secret: docker_password
+    repo: rancher/terraform-controller
+    tag: "${DRONE_TAG}"
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
 
-  - name: publish-terraform-executor-image
-    pull: default
-    image: plugins/docker
-    settings:
-      context: package/
-      dockerfile: package/Dockerfile.executor
-      repo: rancher/terraform-controller-executor
-      tags:
-        - "${DRONE_TAG}"
-        - latest
-      password:
-        from_secret: docker_password
-      username:
-        from_secret: docker_username
-    when:
-      refs:
-        - refs/tags/v*
-      event:
-        - tag
+- name: publish-terraform-executor-image
+  pull: default
+  image: plugins/docker
+  settings:
+    context: package/
+    dockerfile: package/Dockerfile.executor
+    password:
+      from_secret: docker_password
+    repo: rancher/terraform-controller-executor
+    tags:
+    - "${DRONE_TAG}"
+    - latest
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
 
-  - name: publish-terraform-appliance-image
-    pull: default
-    image: plugins/docker
-    settings:
-      context: package/
-      dockerfile: package/Dockerfile.appliance
-      repo: rancher/terraform-controller-appliance
-      tags:
-        - "${DRONE_TAG}"
-        - latest
-      password:
-        from_secret: docker_password
-      username:
-        from_secret: docker_username
-    when:
-      refs:
-        - refs/tags/v*
-      event:
-        - tag
+- name: publish-terraform-appliance-image
+  pull: default
+  image: plugins/docker
+  settings:
+    context: package/
+    dockerfile: package/Dockerfile.appliance
+    password:
+      from_secret: docker_password
+    repo: rancher/terraform-controller-appliance
+    tags:
+    - "${DRONE_TAG}"
+    - latest
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
 
-  - name: github_binary_prerelease
-    pull: default
-    image: plugins/github-release
-    settings:
-      api_key:
-        from_secret: github_token
-      checksum:
-        - sha256
-      files:
-        - "bin/*"
-      prerelease: true
-    when:
-      event:
-        - tag
-      ref:
-        include:
-          - "refs/tags/*rc*"
-          - "refs/tags/*alpha*"
+- name: github_binary_prerelease
+  pull: default
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: github_token
+    checksum:
+    - sha256
+    files:
+    - "bin/*"
+    prerelease: true
+  when:
+    event:
+    - tag
+    ref:
+    - "refs/tags/*rc*"
+    - "refs/tags/*alpha*"
 
-  - name: github_binary_release
-    pull: default
-    image: plugins/github-release
-    settings:
-      api_key:
-        from_secret: github_token
-      checksum:
-        - sha256
-      files:
-        - "bin/*"
-    when:
-      event:
-        - tag
-      ref:
-        include:
-          - "refs/tags/v*"
-        exclude:
-          - "refs/tags/*rc*"
-          - "refs/tags/*alpha*"
+- name: github_binary_release
+  pull: default
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: github_token
+    checksum:
+    - sha256
+    files:
+    - "bin/*"
+  when:
+    event:
+    - tag
+    ref:
+      include:
+      - "refs/tags/v*"
+      exclude:
+      - "refs/tags/*rc*"
+      - "refs/tags/*alpha*"
+
 ---
 kind: pipeline
 name: manifest
@@ -313,26 +312,28 @@ steps:
 - name: manifest
   image: plugins/manifest:1.0.2
   settings:
-    username:
-      from_secret: docker_username
     password:
       from_secret: docker_password
     platforms:
-      - linux/amd64
-      - linux/arm64
-      - linux/arm
+    - linux/amd64
+    - linux/arm64
+    - linux/arm
     target: "rancher/terraform-controller:${DRONE_TAG}"
     template: "rancher/terraform-controller:${DRONE_TAG}-ARCH"
+    username:
+      from_secret: docker_username
   when:
+    event:
+    - tag
     instance:
     - drone-publish.rancher.io
     ref:
     - refs/head/master
-    - refs/tags/*
-    event:
-    - tag
+    - "refs/tags/*"
 
 depends_on:
 - amd64
 - arm64
 - arm
+
+...
