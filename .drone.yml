@@ -20,6 +20,8 @@ steps:
   image: rancher/dapper:v0.4.1
   commands:
   - "cp -r ./bin/* ./package/"
+  - "mkdir -p ./package/yaml"
+  - "cp ./manifests/*.yaml ./package/yaml"
   when:
     event:
     - tag
@@ -103,6 +105,8 @@ steps:
   image: rancher/dapper:v0.4.1
   commands:
   - "cp -r ./bin/* ./package/"
+  - "mkdir -p ./package/yaml"
+  - "cp ./manifests/*.yaml ./package/yaml"
   when:
     event:
     - tag
@@ -168,6 +172,8 @@ steps:
   image: rancher/dapper:v0.4.1
   commands:
   - "cp -r ./bin/* ./package/"
+  - "mkdir -p ./package/yaml"
+  - "cp ./manifests/*.yaml ./package/yaml"
   when:
     event:
     - tag
