@@ -277,8 +277,6 @@ steps:
       from_secret: docker_password
     platforms:
     - linux/amd64
-    - linux/arm64
-    - linux/arm
     target: "rancher/terraform-controller-executor:${DRONE_TAG}"
     template: "rancher/terraform-controller-executor:${DRONE_TAG}-ARCH"
     username:
