@@ -141,7 +141,7 @@ func (h *handler) OnChange(key string, obj *v1.Execution) (*v1.Execution, error)
 		obj.Spec.Version = 1
 	}
 	if obj.Spec.Image == "" {
-		obj.Spec.Image = fmt.Sprintf("%s:dev", DefaultExecutorImage)
+		obj.Spec.Image = fmt.Sprintf("%s:latest", DefaultExecutorImage)
 	}
 
 	input, ok, err := h.gatherInput(obj)

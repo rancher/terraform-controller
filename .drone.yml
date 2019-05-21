@@ -164,12 +164,12 @@ steps:
   image: plugins/docker
   settings:
     dockerfile: package/Dockerfile
-    password:
-      from_secret: docker_password
     repo: "rancher/terraform-controller"
     tag: "${DRONE_TAG}-arm"
     username:
       from_secret: docker_username
+    password:
+      from_secret: docker_password
   when:
     instance:
     - drone-publish.rancher.io
@@ -184,6 +184,123 @@ volumes:
   host:
     path: /var/run/docker.sock
 
+---
+steps:
+  - name: build
+    pull: default
+    image: rancher/dapper:v0.4.1
+    commands:
+      - dapper ci
+    privileged: true
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+
+  - name: stage-binaries
+    pull: default
+    image: rancher/dapper:v0.4.1
+    commands:
+      - "cp -r ./bin/* ./package/"
+    when:
+      event:
+        - tag
+
+  - name: publish-terraform-controller-image
+    pull: default
+    image: plugins/docker
+    settings:
+      context: package/
+      dockerfile: package/Dockerfile.controller
+      repo: rancher/terraform-controller
+      tag: "${DRONE_TAG}"
+      password:
+        from_secret: docker_password
+      username:
+        from_secret: docker_username
+    when:
+      refs:
+        - refs/tags/v*
+      event:
+        - tag
+
+  - name: publish-terraform-executor-image
+    pull: default
+    image: plugins/docker
+    settings:
+      context: package/
+      dockerfile: package/Dockerfile.executor
+      repo: rancher/terraform-controller-executor
+      tags:
+        - "${DRONE_TAG}"
+        - latest
+      password:
+        from_secret: docker_password
+      username:
+        from_secret: docker_username
+    when:
+      refs:
+        - refs/tags/v*
+      event:
+        - tag
+
+  - name: publish-terraform-appliance-image
+    pull: default
+    image: plugins/docker
+    settings:
+      context: package/
+      dockerfile: package/Dockerfile.appliance
+      repo: rancher/terraform-controller-appliance
+      tags:
+        - "${DRONE_TAG}"
+        - latest
+      password:
+        from_secret: docker_password
+      username:
+        from_secret: docker_username
+    when:
+      refs:
+        - refs/tags/v*
+      event:
+        - tag
+
+  - name: github_binary_prerelease
+    pull: default
+    image: plugins/github-release
+    settings:
+      api_key:
+        from_secret: github_token
+      checksum:
+        - sha256
+      files:
+        - "bin/*"
+      prerelease: true
+    when:
+      event:
+        - tag
+      ref:
+        include:
+          - "refs/tags/*rc*"
+          - "refs/tags/*alpha*"
+
+  - name: github_binary_release
+    pull: default
+    image: plugins/github-release
+    settings:
+      api_key:
+        from_secret: github_token
+      checksum:
+        - sha256
+      files:
+        - "bin/*"
+    when:
+      event:
+        - tag
+      ref:
+        include:
+          - "refs/tags/v*"
+        exclude:
+          - "refs/tags/*rc*"
+          - "refs/tags/*alpha*"
 ---
 kind: pipeline
 name: manifest

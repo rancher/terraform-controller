@@ -1,0 +1,27 @@
+#!/bin/bash -xe
+set -e
+
+source $(dirname $0)/version
+
+ARCH=${ARCH:-"amd64"}
+SUFFIX=""
+[ "${ARCH}" != "amd64" ] && SUFFIX="_${ARCH}"
+
+cd $(dirname $0)/../package
+
+TAG=${TAG:-${VERSION}${SUFFIX}}
+REPO=${REPO:-rancher}
+
+if echo $TAG | grep -q dirty; then
+    TAG=dev
+fi
+
+mkdir ./yaml
+cp ../manifests/*.yaml ./yaml
+
+IMAGE=${REPO}/terraform-controller-appliance:${TAG}
+docker build -t ${IMAGE} -f Dockerfile.appliance .
+echo ${IMAGE} > ../dist/images
+echo Built ${IMAGE}
+
+rm -rf ./yaml
