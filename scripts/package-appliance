@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash
 set -e
 
 source $(dirname $0)/version
