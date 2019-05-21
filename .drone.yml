@@ -185,6 +185,8 @@ volumes:
     path: /var/run/docker.sock
 
 ---
+kind: pipeline
+name: terraform-controller
 
 platform:
   os: linux
