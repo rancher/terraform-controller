@@ -123,24 +123,6 @@ steps:
     event:
     - tag
 
-- name: publish-terraform-executor-image
-  pull: default
-  image: plugins/docker
-  settings:
-    context: package/
-    dockerfile: package/Dockerfile.executor
-    password:
-      from_secret: docker_password
-    repo: rancher/terraform-controller-executor
-    tags:
-    - "${DRONE_TAG}-arm64"
-    - latest
-    username:
-      from_secret: docker_username
-  when:
-    event:
-    - tag
-
 - name: publish-terraform-appliance-image
   pull: default
   image: plugins/docker
@@ -200,24 +182,6 @@ steps:
       from_secret: docker_password
     repo: rancher/terraform-controller
     tag: "${DRONE_TAG}-arm"
-    username:
-      from_secret: docker_username
-  when:
-    event:
-    - tag
-
-- name: publish-terraform-executor-image
-  pull: default
-  image: plugins/docker
-  settings:
-    context: package/
-    dockerfile: package/Dockerfile.executor
-    password:
-      from_secret: docker_password
-    repo: rancher/terraform-controller-executor
-    tags:
-    - "${DRONE_TAG}-arm"
-    - latest
     username:
       from_secret: docker_username
   when:
