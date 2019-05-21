@@ -2,12 +2,12 @@ package terraform
 
 import (
 	"context"
-	batchv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/batch/v1"
-	corev1 "github.com/rancher/terraform-controller/pkg/generated/controllers/core/v1"
-	rbacv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/rbac/v1"
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/terraform/execution"
 	"github.com/rancher/terraform-controller/pkg/terraform/module"
+	batchv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/batch/v1"
+	corev1 "github.com/rancher/wrangler-api/pkg/generated/controllers/core/v1"
+	rbacv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/rbac/v1"
 )
 
 func Register(
