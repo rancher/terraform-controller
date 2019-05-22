@@ -16,12 +16,9 @@ The executor is a job that runs Terraform. Taking input from the execution run C
 Executions have a 1-to-many relationship with execution runs, as updates or changes are made in the module or execution additional runs are created to update the terraform resources.
 
 # Deploying
-Use provided manifests `kubectl create -f ./manifests`. 
+Use provided manifests `kubectl create -f ./manifests` to deploy to an existing k8s cluster. Manifests will create all CRDs necessary and a Deployment with the rancher/terraform-controller image. 
 
-## Namespace
-Everything is put in the `terraform-controller` namespace with these provided manifests. Edit metadata.namespace in files to change name space or remove to run in default. You will need to update the args for the command in the deployment to update or remove `--namespace` argument for the executable. Passing in the flag limits the controller to only watching CRD objects in it's namespace, remove this param to let the terraform-controller see all CRD objects in any namespace.
-
-# Verify
+## Verify
 ```
 ~ kubectl get all -n terraform-controller
 NAME                                        READY   STATUS    RESTARTS   AGE
@@ -32,6 +29,33 @@ deployment.apps/terraform-controller   1/1     1            1           18s
 
 NAME                                              DESIRED   CURRENT   READY   AGE
 replicaset.apps/terraform-controller-8494cf85c5   1         1         1       18s
+```
+
+## Namespace
+Everything is put in the `terraform-controller` namespace with these provided manifests. Edit metadata.namespace in files to change name space or remove to run in default. You will need to update the args for the command in the deployment to update or remove `--namespace` argument for the executable. Passing in the flag limits the controller to only watching CRD objects in it's namespace, remove this param to let the terraform-controller see all CRD objects in any namespace.
+
+## Quickstart Appliance + k3s
+Use (k3d)[https://github.com/rancher/k3d/releases] to spin up small (k3s)[https://github.com/rancher/k3s] clusters for a quick start for using the Terraform Controller. The appliance image comes pre-built with the deployment manifests and will auto-create verything the Terraform Controller needs when they boot.
+
+```shell
+~ k3d create --name terraform-controller --image rancher/terraform-controller-appliance
+~ export KUBECONFIG="$(k3d get-kubeconfig --name='terraform-controller')"
+~ kubectl get all -n terraform-controller
+NAME                                       READY   STATUS    RESTARTS   AGE
+pod/terraform-controller-d774bbd44-w4mzk   0/1     Pending   0          1s
+
+NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/terraform-controller   0/1     1            0           14s
+
+NAME                                             DESIRED   CURRENT   READY   AGE
+replicaset.apps/terraform-controller-d774bbd44   1         1         0       1s
+
+~  kubectl get crd  | grep terraformcontroller
+executionruns.terraformcontroller.cattle.io   2019-05-22T17:19:01Z
+executions.terraformcontroller.cattle.io      2019-05-22T17:19:01Z
+modules.terraformcontroller.cattle.io         2019-05-22T17:19:01Z
+
+~ k3d delete --name terraform
 ```
 
 # Example
