@@ -35,7 +35,8 @@ steps:
     password:
       from_secret: docker_password
     repo: rancher/terraform-controller
-    tag: "${DRONE_TAG}-amd64"
+    tag:
+    - "${DRONE_TAG}-amd64"
     username:
       from_secret: docker_username
   when:
@@ -53,7 +54,6 @@ steps:
     repo: rancher/terraform-controller-executor
     tags:
     - "${DRONE_TAG}-amd64"
-    - latest
     username:
       from_secret: docker_username
   when:
@@ -71,7 +71,6 @@ steps:
     repo: rancher/terraform-controller-appliance
     tags:
     - "${DRONE_TAG}-amd64"
-    - latest
     username:
       from_secret: docker_username
   when:
@@ -289,6 +288,90 @@ steps:
     ref:
     - refs/head/master
     - "refs/tags/*"
+
+depends_on:
+- amd64
+- arm64
+- arm
+---
+kind: pipeline
+name: manifest-latest
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: manifest-controller
+  image: plugins/manifest:1.0.2
+  settings:
+    password:
+      from_secret: docker_password
+    platforms:
+    - linux/amd64
+    - linux/arm64
+    - linux/arm
+    target: "rancher/terraform-controller:latest"
+    template: "rancher/terraform-controller:${DRONE_TAG}-ARCH"
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+    instance:
+    - drone-publish.rancher.io
+    ref:
+    - refs/head/master
+    - "refs/tags/*"
+
+- name: manifest-appliance
+  image: plugins/manifest:1.0.2
+  settings:
+    password:
+      from_secret: docker_password
+    platforms:
+    - linux/amd64
+    - linux/arm64
+    - linux/arm
+    target: "rancher/terraform-controller-appliance:latest"
+    template: "rancher/terraform-controller-appliance:${DRONE_TAG}-ARCH"
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+    instance:
+    - drone-publish.rancher.io
+    ref:
+    - refs/head/master
+    - "refs/tags/*"
+
+- name: manifest-executor
+  image: plugins/manifest:1.0.2
+  settings:
+    password:
+      from_secret: docker_password
+    platforms:
+    - linux/amd64
+    target: "rancher/terraform-controller-executor:latest"
+    template: "rancher/terraform-controller-executor:${DRONE_TAG}-ARCH"
+    username:
+      from_secret: docker_username
+  when:
+    event:
+    - tag
+    instance:
+    - drone-publish.rancher.io
+    ref:
+    - refs/head/master
+    - "refs/tags/*"
+
+trigger:
+  event:
+    tag
+  ref:
+    exclude:
+    - "refs/tags/*rc*"
 
 depends_on:
 - amd64
