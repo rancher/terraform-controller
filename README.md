@@ -63,9 +63,9 @@ With the controller running you can run the provided example in the `./example` 
 
 Modify `./example/00-secret.yaml` with your Digital Ocean API token and desired droplet name.
 
-Run `kubectl create -f ./example` to create all envvars/secrets/module and the execution which will automatically run. The controller creates Jobs for the Terraform runs so to access logs check the pod logs for the executor create and destroy jobs. This example is setup to auto-confirm and auto-delete when the CRD object is destroyed.
+Run `kubectl create -f ./example -n terraform-controller` to create all envvars/secrets/module and the execution which will automatically run. The controller creates Jobs for the Terraform runs so to access logs check the pod logs for the executor create and destroy jobs. This example is setup to auto-confirm and auto-delete when the CRD object is destroyed.
 
-Delete the droplet by deleting the CRD `kubectl delete -f ./example/20-deployment.yaml`. 
+Delete the droplet by deleting the CRD `kubectl delete -f ./example/20-deployment.yaml -n terraform-controller`. 
 
 ## Approving a Plan
 In `./example/20-execution.yaml` its pre-configured to auto-approve and auto-delete when you make the execution CRD. You can turn off `spec.destroyOnDelete` and `spec.autoConfirm` and do these by hand doing the following.

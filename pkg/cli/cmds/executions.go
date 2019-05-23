@@ -8,28 +8,28 @@ import (
 
 var simpleRunTableHeaders = []string{"RUN NAME", "EXECUTION NAME", "APPROVAL"}
 
-func RunCommand() cli.Command {
+func ExecutionCommand() cli.Command {
 	return cli.Command{
-		Name:    "runs",
-		Aliases: []string{"run"},
+		Name:    "executions",
+		Aliases: []string{"execution"},
 		Usage:   "Manage executions",
 		Action:  executionList,
 		Subcommands: []cli.Command{
 			{
 				Name:      "ls",
-				Usage:     "List runs",
+				Usage:     "List executions",
 				ArgsUsage: "None",
 				Action:    executionList,
 			},
 			{
 				Name:      "approve",
-				Usage:     "Approves a run",
+				Usage:     "Approves an execution",
 				ArgsUsage: "[RUN NAME]",
 				Action:    approveExecution,
 			},
 			{
 				Name:      "deny",
-				Usage:     "Deny approval for a run",
+				Usage:     "Deny approval for an execution",
 				ArgsUsage: "[RUN NAME]",
 				Action:    denyExecution,
 			},

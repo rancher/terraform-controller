@@ -2,8 +2,9 @@ package cmds
 
 import (
 	"context"
+
 	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
-	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
+	v1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/wrangler/pkg/signals"
 	"github.com/rancher/wrangler/pkg/start"
 	"github.com/sirupsen/logrus"
@@ -11,9 +12,9 @@ import (
 )
 
 type controllers struct {
-	modules       v1.ModuleController
-	executions    v1.ExecutionController
-	executionRuns v1.ExecutionRunController
+	modules    v1.ModuleController
+	states     v1.StateController
+	executions v1.ExecutionController
 }
 
 func getControllers(kubeconfig, ns string) (*controllers, error) {
@@ -30,9 +31,9 @@ func getControllers(kubeconfig, ns string) (*controllers, error) {
 	}
 
 	controllers := &controllers{
-		modules:       tfFactory.Terraformcontroller().V1().Module(),
-		executions:    tfFactory.Terraformcontroller().V1().Execution(),
-		executionRuns: tfFactory.Terraformcontroller().V1().ExecutionRun(),
+		modules:    tfFactory.Terraformcontroller().V1().Module(),
+		states:     tfFactory.Terraformcontroller().V1().State(),
+		executions: tfFactory.Terraformcontroller().V1().Execution(),
 	}
 
 	ctx := signals.SetupSignalHandler(context.Background())

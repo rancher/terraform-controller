@@ -1,7 +1,7 @@
 package cmds
 
 import (
-	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/urfave/cli"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,7 +18,7 @@ func ModuleCommand() cli.Command {
 	return cli.Command{
 		Name:    "modules",
 		Aliases: []string{"module"},
-		Usage:   "Operations on TF Operator modules",
+		Usage:   "Manage modules",
 		Action:  moduleList,
 		Subcommands: []cli.Command{
 			{

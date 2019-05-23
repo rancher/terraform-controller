@@ -32,7 +32,7 @@ type Input struct {
 }
 
 // deployCreate creates all resources for the job to run terraform create and returns the run name
-func (h *handler) deployCreate(execution *v1.Execution, input *Input, action string) (string, error) {
+func (h *handler) deployCreate(execution *v1.State, input *Input, action string) (string, error) {
 	logrus.Info("deploy create")
 	combinedVars := combineVars(input)
 	// Always set the key for the k8s backend
@@ -54,7 +54,7 @@ func (h *handler) deployCreate(execution *v1.Execution, input *Input, action str
 	}
 
 	if match {
-		return execution.Status.ExecutionRunName, nil
+		return execution.Status.ExecutionName, nil
 	}
 
 	namespace := execution.Namespace
@@ -69,7 +69,7 @@ func (h *handler) deployCreate(execution *v1.Execution, input *Input, action str
 	}
 
 	logrus.Debug("Create - Creating executionRun")
-	_, err = h.createExecutionRun(or, execution, name, input)
+	_, err = h.createExecution(or, execution, name, input)
 	if err != nil {
 		return "", err
 	}
@@ -110,7 +110,7 @@ func (h *handler) deployCreate(execution *v1.Execution, input *Input, action str
 }
 
 // deployCreate creates all resources for the job to run terraform destroy
-func (h *handler) deployDestroy(execution *v1.Execution, input *Input, action string) (string, error) {
+func (h *handler) deployDestroy(execution *v1.State, input *Input, action string) (string, error) {
 	combinedVars := combineVars(input)
 	// Always set the key for the k8s backend
 	combinedVars["key"] = execution.Name
@@ -128,7 +128,7 @@ func (h *handler) deployDestroy(execution *v1.Execution, input *Input, action st
 	or := []metaV1.OwnerReference{}
 
 	logrus.Debug("Destroy - Creating executionRun")
-	_, err = h.createExecutionRun(or, execution, name, input)
+	_, err = h.createExecution(or, execution, name, input)
 	if err != nil {
 		return "", err
 	}
@@ -169,12 +169,12 @@ func (h *handler) deployDestroy(execution *v1.Execution, input *Input, action st
 }
 
 // runsMatch checks the previous run with the incoming to determine if the job should be executed again
-func (h *handler) runsMatch(execution *v1.Execution, input *Input, jsonVars []byte) (bool, error) {
-	if execution.Status.ExecutionRunName == "" {
+func (h *handler) runsMatch(execution *v1.State, input *Input, jsonVars []byte) (bool, error) {
+	if execution.Status.ExecutionName == "" {
 		return false, nil
 	}
 
-	prevExecutionRun, err := h.executionRuns.Get(execution.ObjectMeta.Namespace, execution.Status.ExecutionRunName, metaV1.GetOptions{})
+	prevExecutionRun, err := h.executions.Get(execution.ObjectMeta.Namespace, execution.Status.ExecutionName, metaV1.GetOptions{})
 	if err != nil {
 		if !k8sError.IsNotFound(err) {
 			return false, err
@@ -204,7 +204,7 @@ func (h *handler) runsMatch(execution *v1.Execution, input *Input, jsonVars []by
 }
 
 // varsChanged returns true if the vars have changed since the last run
-func (h *handler) varsChanged(vars []byte, run *v1.ExecutionRun) (bool, error) {
+func (h *handler) varsChanged(vars []byte, run *v1.Execution) (bool, error) {
 	oldSecret, err := h.secrets.Get(run.ObjectMeta.Namespace, run.Spec.SecretName, metaV1.GetOptions{})
 	if err != nil {
 		if !k8sError.IsNotFound(err) {
@@ -221,20 +221,20 @@ func (h *handler) varsChanged(vars []byte, run *v1.ExecutionRun) (bool, error) {
 	return true, nil
 }
 
-func (h *handler) createExecutionRun(
+func (h *handler) createExecution(
 	or []metaV1.OwnerReference,
-	execution *v1.Execution,
+	execution *v1.State,
 	name string,
 	input *Input,
-) (*v1.ExecutionRun, error) {
-	execRun := &v1.ExecutionRun{
+) (*v1.Execution, error) {
+	execRun := &v1.Execution{
 		ObjectMeta: metaV1.ObjectMeta{
 			Name:            name,
 			Namespace:       execution.Namespace,
 			OwnerReferences: or,
 			Annotations:     map[string]string{"approved": ""},
 		},
-		Spec: v1.ExecutionRunSpec{
+		Spec: v1.ExecutionSpec{
 			ExecutionName:    execution.Name,
 			AutoConfirm:      execution.Spec.AutoConfirm,
 			SecretName:       "s-" + name,
@@ -244,19 +244,19 @@ func (h *handler) createExecutionRun(
 		},
 	}
 
-	run, err := h.executionRuns.Create(execRun)
+	run, err := h.executions.Create(execRun)
 	if err != nil {
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
 
-		return h.executionRuns.Get(execution.Namespace, name, metaV1.GetOptions{})
+		return h.executions.Get(execution.Namespace, name, metaV1.GetOptions{})
 
 	}
 	return run, nil
 }
 
-func (h *handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name string, execution *v1.Execution, vars []byte) (*coreV1.Secret, error) {
+func (h *handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name string, execution *v1.State, vars []byte) (*coreV1.Secret, error) {
 	secretData := map[string][]byte{
 		"varFile": vars,
 	}
@@ -389,14 +389,14 @@ func (h *handler) updateOwnerReference(job *batchV1.Job, objs []interface{}, nam
 
 	for _, obj := range objs {
 		switch v := obj.(type) {
-		case *v1.ExecutionRun:
+		case *v1.Execution:
 			err = tryUpdate(func() error {
-				run, err := h.executionRuns.Get(namespace, v.Name, metaV1.GetOptions{})
+				run, err := h.executions.Get(namespace, v.Name, metaV1.GetOptions{})
 				if err != nil {
 					return errors.WithMessage(err, "failed executionRun get")
 				}
 				run.OwnerReferences = or
-				_, err = h.executionRuns.Update(run)
+				_, err = h.executions.Update(run)
 				if err != nil {
 					return errors.WithMessage(err, "failed executionRun update")
 				}
@@ -511,7 +511,7 @@ func createEnvForJob(input *Input, action, runName, namespace string) {
 	input.EnvVars = append(input.EnvVars, envVars...)
 }
 
-func createExecRunAndSecretName(execution *v1.Execution, vars map[string]string, h string) string {
+func createExecRunAndSecretName(execution *v1.State, vars map[string]string, h string) string {
 	varHash := digest.SHA256Map(vars)
 
 	buf := new(bytes.Buffer)

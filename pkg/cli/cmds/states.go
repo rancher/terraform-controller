@@ -9,11 +9,11 @@ import (
 
 var simpleStateTableHeader = []string{"NAME", "RUNNER NAME", "STATUS"}
 
-func ExecutionCommand() cli.Command {
+func StateCommand() cli.Command {
 	return cli.Command{
-		Name:    "executions",
-		Aliases: []string{"execution"},
-		Usage:   "Operations on TF Operator modules",
+		Name:    "states",
+		Aliases: []string{"state"},
+		Usage:   "Manage states",
 		Action:  stateList,
 		Subcommands: []cli.Command{
 			{
@@ -60,7 +60,7 @@ func ExecutionCommand() cli.Command {
 			{
 				Name:      "run",
 				Usage:     "Run the execution",
-				Action:    runExecution,
+				Action:    runState,
 				ArgsUsage: "[EXECUTION NAME]",
 			},
 		},
@@ -110,7 +110,7 @@ func createExecution(c *cli.Context) error {
 	return doStateCreate(namespace, kubeConfig, execution)
 }
 
-func runExecution(c *cli.Context) error {
+func runState(c *cli.Context) error {
 	kubeConfig := c.GlobalString("kubeconfig")
 	namespace := c.GlobalString("namespace")
 
@@ -198,11 +198,15 @@ func getSimpleStateTableHeader() []string {
 func stateListToTableStrings(states *v1.StateList) [][]string {
 	var values [][]string
 
-	for _, execution := range states.Items {
+	for _, state := range states.Items {
+		status := ""
+		if 0 < len(state.Status.Conditions) {
+			status = state.Status.Conditions[len(state.Status.Conditions)-1].Type
+		}
 		values = append(values, []string{
-			execution.Name,
-			execution.Status.ExecutionName,
-			execution.Status.Conditions[len(execution.Status.Conditions)-1].Type,
+			state.Name,
+			state.Status.ExecutionName,
+			status,
 		})
 	}
 

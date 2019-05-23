@@ -1,4 +1,4 @@
-package execution
+package state
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (h *handler) gatherInput(obj *v1.Execution) (*Input, bool, error) {
+func (h *handler) gatherInput(obj *v1.State) (*Input, bool, error) {
 	var (
 		ns   = obj.Namespace
 		spec = obj.Spec
@@ -20,6 +20,7 @@ func (h *handler) gatherInput(obj *v1.Execution) (*Input, bool, error) {
 	mod, err := h.modules.Get(ns, spec.ModuleName, metaV1.GetOptions{})
 
 	if err != nil {
+		logrus.Debug("Pulling Module Failed.")
 		if k8sError.IsNotFound(err) {
 			return nil, false, nil
 		}
@@ -31,8 +32,8 @@ func (h *handler) gatherInput(obj *v1.Execution) (*Input, bool, error) {
 	}
 
 	secrets, ok, err := h.getSecrets(ns, spec)
-	logrus.Debug(secrets)
 	if !ok || err != nil {
+		logrus.Debug("Pulling Secrets Failed.")
 		return nil, false, err
 	}
 
@@ -64,7 +65,7 @@ func (h *handler) gatherInput(obj *v1.Execution) (*Input, bool, error) {
 	}, true, nil
 }
 
-func (h *handler) getSecrets(ns string, spec v1.ExecutionSpec) ([]*coreV1.Secret, bool, error) {
+func (h *handler) getSecrets(ns string, spec v1.StateSpec) ([]*coreV1.Secret, bool, error) {
 	var secrets []*coreV1.Secret
 
 	for _, name := range spec.Variables.SecretNames {
@@ -81,7 +82,7 @@ func (h *handler) getSecrets(ns string, spec v1.ExecutionSpec) ([]*coreV1.Secret
 	return secrets, true, nil
 }
 
-func (h *handler) getConfigs(ns string, spec v1.ExecutionSpec) ([]*coreV1.ConfigMap, bool, error) {
+func (h *handler) getConfigs(ns string, spec v1.StateSpec) ([]*coreV1.ConfigMap, bool, error) {
 	var configMaps []*coreV1.ConfigMap
 
 	for _, name := range spec.Variables.ConfigNames {
@@ -98,27 +99,27 @@ func (h *handler) getConfigs(ns string, spec v1.ExecutionSpec) ([]*coreV1.Config
 	return configMaps, true, nil
 }
 
-func (h *handler) getExecutions(ns string, spec v1.ExecutionSpec) (map[string]string, bool, error) {
+func (h *handler) getExecutions(ns string, spec v1.StateSpec) (map[string]string, bool, error) {
 	result := map[string]string{}
 	for dataName, execName := range spec.Data {
-		execution, err := h.executions.Get(ns, execName, metaV1.GetOptions{})
+		state, err := h.states.Get(ns, execName, metaV1.GetOptions{})
 		if k8sError.IsNotFound(err) {
 			return result, false, nil
 		} else if err != nil {
 			return result, false, err
 		}
 
-		if execution.Status.ExecutionRunName == "" {
+		if state.Status.ExecutionName == "" {
 			return result, false, fmt.Errorf("referenced execution %v does not have any runs", execName)
 		}
 
-		result[dataName] = execution.Status.ExecutionRunName
+		result[dataName] = state.Status.ExecutionName
 	}
 
 	return result, true, nil
 }
 
-func (h *handler) getEnvVars(ns string, spec v1.ExecutionSpec) ([]coreV1.EnvVar, bool, error) {
+func (h *handler) getEnvVars(ns string, spec v1.StateSpec) ([]coreV1.EnvVar, bool, error) {
 	result := []coreV1.EnvVar{}
 
 	logrus.Debugf("Pulling Vars from Secrets: %d", len(spec.Variables.EnvSecretNames))

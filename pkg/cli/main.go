@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/rancher/terraform-controller/pkg/cli/cmds"
@@ -16,6 +17,10 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "tffy"
 	app.Version = VERSION
+	app.Action = cli.ShowCommandHelp
+	app.CommandNotFound = func(c *cli.Context, command string) {
+		fmt.Fprintf(c.App.Writer, "Thar be no %q here.\n", command)
+	}
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:   "kubeconfig",
@@ -31,8 +36,8 @@ func main() {
 
 	app.Commands = []cli.Command{
 		cmds.ModuleCommand(),
+		cmds.StateCommand(),
 		cmds.ExecutionCommand(),
-		cmds.RunCommand(),
 	}
 	app.Action = run
 
