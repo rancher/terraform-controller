@@ -60,16 +60,16 @@ func NewExecution(namespace, name string, obj Execution) *Execution {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ExecutionRunList is a list of ExecutionRun resources
-type ExecutionRunList struct {
+// StateList is a list of State resources
+type StateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []ExecutionRun `json:"items"`
+	Items []State `json:"items"`
 }
 
-func NewExecutionRun(namespace, name string, obj ExecutionRun) *ExecutionRun {
-	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("ExecutionRun").ToAPIVersionAndKind()
+func NewState(namespace, name string, obj State) *State {
+	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("State").ToAPIVersionAndKind()
 	obj.Name = name
 	obj.Namespace = namespace
 	return &obj

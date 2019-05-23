@@ -26,10 +26,10 @@ import (
 type Interface interface {
 	// Executions returns a ExecutionInformer.
 	Executions() ExecutionInformer
-	// ExecutionRuns returns a ExecutionRunInformer.
-	ExecutionRuns() ExecutionRunInformer
 	// Modules returns a ModuleInformer.
 	Modules() ModuleInformer
+	// States returns a StateInformer.
+	States() StateInformer
 }
 
 type version struct {
@@ -48,12 +48,12 @@ func (v *version) Executions() ExecutionInformer {
 	return &executionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// ExecutionRuns returns a ExecutionRunInformer.
-func (v *version) ExecutionRuns() ExecutionRunInformer {
-	return &executionRunInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
 // Modules returns a ModuleInformer.
 func (v *version) Modules() ModuleInformer {
 	return &moduleInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// States returns a StateInformer.
+func (v *version) States() StateInformer {
+	return &stateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

@@ -19,45 +19,45 @@ import (
 )
 
 var (
-	lockExecutionRunControllerMockAddGenericHandler       sync.RWMutex
-	lockExecutionRunControllerMockAddGenericRemoveHandler sync.RWMutex
-	lockExecutionRunControllerMockCache                   sync.RWMutex
-	lockExecutionRunControllerMockCreate                  sync.RWMutex
-	lockExecutionRunControllerMockDelete                  sync.RWMutex
-	lockExecutionRunControllerMockEnqueue                 sync.RWMutex
-	lockExecutionRunControllerMockGet                     sync.RWMutex
-	lockExecutionRunControllerMockGroupVersionKind        sync.RWMutex
-	lockExecutionRunControllerMockInformer                sync.RWMutex
-	lockExecutionRunControllerMockList                    sync.RWMutex
-	lockExecutionRunControllerMockOnChange                sync.RWMutex
-	lockExecutionRunControllerMockOnRemove                sync.RWMutex
-	lockExecutionRunControllerMockPatch                   sync.RWMutex
-	lockExecutionRunControllerMockUpdate                  sync.RWMutex
-	lockExecutionRunControllerMockUpdateStatus            sync.RWMutex
-	lockExecutionRunControllerMockUpdater                 sync.RWMutex
-	lockExecutionRunControllerMockWatch                   sync.RWMutex
+	lockStateControllerMockAddGenericHandler       sync.RWMutex
+	lockStateControllerMockAddGenericRemoveHandler sync.RWMutex
+	lockStateControllerMockCache                   sync.RWMutex
+	lockStateControllerMockCreate                  sync.RWMutex
+	lockStateControllerMockDelete                  sync.RWMutex
+	lockStateControllerMockEnqueue                 sync.RWMutex
+	lockStateControllerMockGet                     sync.RWMutex
+	lockStateControllerMockGroupVersionKind        sync.RWMutex
+	lockStateControllerMockInformer                sync.RWMutex
+	lockStateControllerMockList                    sync.RWMutex
+	lockStateControllerMockOnChange                sync.RWMutex
+	lockStateControllerMockOnRemove                sync.RWMutex
+	lockStateControllerMockPatch                   sync.RWMutex
+	lockStateControllerMockUpdate                  sync.RWMutex
+	lockStateControllerMockUpdateStatus            sync.RWMutex
+	lockStateControllerMockUpdater                 sync.RWMutex
+	lockStateControllerMockWatch                   sync.RWMutex
 )
 
-// Ensure, that ExecutionRunControllerMock does implement ExecutionRunController.
+// Ensure, that StateControllerMock does implement StateController.
 // If this is not the case, regenerate this file with moq.
-var _ v1.ExecutionRunController = &ExecutionRunControllerMock{}
+var _ v1.StateController = &StateControllerMock{}
 
-// ExecutionRunControllerMock is a mock implementation of ExecutionRunController.
+// StateControllerMock is a mock implementation of StateController.
 //
-//     func TestSomethingThatUsesExecutionRunController(t *testing.T) {
+//     func TestSomethingThatUsesStateController(t *testing.T) {
 //
-//         // make and configure a mocked ExecutionRunController
-//         mockedExecutionRunController := &ExecutionRunControllerMock{
+//         // make and configure a mocked StateController
+//         mockedStateController := &StateControllerMock{
 //             AddGenericHandlerFunc: func(ctx context.Context, name string, handler generic.Handler)  {
 // 	               panic("mock out the AddGenericHandler method")
 //             },
 //             AddGenericRemoveHandlerFunc: func(ctx context.Context, name string, handler generic.Handler)  {
 // 	               panic("mock out the AddGenericRemoveHandler method")
 //             },
-//             CacheFunc: func() v1.ExecutionRunCache {
+//             CacheFunc: func() v1.StateCache {
 // 	               panic("mock out the Cache method")
 //             },
-//             CreateFunc: func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+//             CreateFunc: func(in1 *v1a.State) (*v1a.State, error) {
 // 	               panic("mock out the Create method")
 //             },
 //             DeleteFunc: func(namespace string, name string, options *v1b.DeleteOptions) error {
@@ -66,7 +66,7 @@ var _ v1.ExecutionRunController = &ExecutionRunControllerMock{}
 //             EnqueueFunc: func(namespace string, name string)  {
 // 	               panic("mock out the Enqueue method")
 //             },
-//             GetFunc: func(namespace string, name string, options v1b.GetOptions) (*v1a.ExecutionRun, error) {
+//             GetFunc: func(namespace string, name string, options v1b.GetOptions) (*v1a.State, error) {
 // 	               panic("mock out the Get method")
 //             },
 //             GroupVersionKindFunc: func() schema.GroupVersionKind {
@@ -75,22 +75,22 @@ var _ v1.ExecutionRunController = &ExecutionRunControllerMock{}
 //             InformerFunc: func() cache.SharedIndexInformer {
 // 	               panic("mock out the Informer method")
 //             },
-//             ListFunc: func(namespace string, opts v1b.ListOptions) (*v1a.ExecutionRunList, error) {
+//             ListFunc: func(namespace string, opts v1b.ListOptions) (*v1a.StateList, error) {
 // 	               panic("mock out the List method")
 //             },
-//             OnChangeFunc: func(ctx context.Context, name string, sync v1.ExecutionRunHandler)  {
+//             OnChangeFunc: func(ctx context.Context, name string, sync v1.StateHandler)  {
 // 	               panic("mock out the OnChange method")
 //             },
-//             OnRemoveFunc: func(ctx context.Context, name string, sync v1.ExecutionRunHandler)  {
+//             OnRemoveFunc: func(ctx context.Context, name string, sync v1.StateHandler)  {
 // 	               panic("mock out the OnRemove method")
 //             },
-//             PatchFunc: func(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.ExecutionRun, error) {
+//             PatchFunc: func(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.State, error) {
 // 	               panic("mock out the Patch method")
 //             },
-//             UpdateFunc: func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+//             UpdateFunc: func(in1 *v1a.State) (*v1a.State, error) {
 // 	               panic("mock out the Update method")
 //             },
-//             UpdateStatusFunc: func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+//             UpdateStatusFunc: func(in1 *v1a.State) (*v1a.State, error) {
 // 	               panic("mock out the UpdateStatus method")
 //             },
 //             UpdaterFunc: func() generic.Updater {
@@ -101,11 +101,11 @@ var _ v1.ExecutionRunController = &ExecutionRunControllerMock{}
 //             },
 //         }
 //
-//         // use mockedExecutionRunController in code that requires ExecutionRunController
+//         // use mockedStateController in code that requires StateController
 //         // and then make assertions.
 //
 //     }
-type ExecutionRunControllerMock struct {
+type StateControllerMock struct {
 	// AddGenericHandlerFunc mocks the AddGenericHandler method.
 	AddGenericHandlerFunc func(ctx context.Context, name string, handler generic.Handler)
 
@@ -113,10 +113,10 @@ type ExecutionRunControllerMock struct {
 	AddGenericRemoveHandlerFunc func(ctx context.Context, name string, handler generic.Handler)
 
 	// CacheFunc mocks the Cache method.
-	CacheFunc func() v1.ExecutionRunCache
+	CacheFunc func() v1.StateCache
 
 	// CreateFunc mocks the Create method.
-	CreateFunc func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error)
+	CreateFunc func(in1 *v1a.State) (*v1a.State, error)
 
 	// DeleteFunc mocks the Delete method.
 	DeleteFunc func(namespace string, name string, options *v1b.DeleteOptions) error
@@ -125,7 +125,7 @@ type ExecutionRunControllerMock struct {
 	EnqueueFunc func(namespace string, name string)
 
 	// GetFunc mocks the Get method.
-	GetFunc func(namespace string, name string, options v1b.GetOptions) (*v1a.ExecutionRun, error)
+	GetFunc func(namespace string, name string, options v1b.GetOptions) (*v1a.State, error)
 
 	// GroupVersionKindFunc mocks the GroupVersionKind method.
 	GroupVersionKindFunc func() schema.GroupVersionKind
@@ -134,22 +134,22 @@ type ExecutionRunControllerMock struct {
 	InformerFunc func() cache.SharedIndexInformer
 
 	// ListFunc mocks the List method.
-	ListFunc func(namespace string, opts v1b.ListOptions) (*v1a.ExecutionRunList, error)
+	ListFunc func(namespace string, opts v1b.ListOptions) (*v1a.StateList, error)
 
 	// OnChangeFunc mocks the OnChange method.
-	OnChangeFunc func(ctx context.Context, name string, sync v1.ExecutionRunHandler)
+	OnChangeFunc func(ctx context.Context, name string, sync v1.StateHandler)
 
 	// OnRemoveFunc mocks the OnRemove method.
-	OnRemoveFunc func(ctx context.Context, name string, sync v1.ExecutionRunHandler)
+	OnRemoveFunc func(ctx context.Context, name string, sync v1.StateHandler)
 
 	// PatchFunc mocks the Patch method.
-	PatchFunc func(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.ExecutionRun, error)
+	PatchFunc func(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.State, error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error)
+	UpdateFunc func(in1 *v1a.State) (*v1a.State, error)
 
 	// UpdateStatusFunc mocks the UpdateStatus method.
-	UpdateStatusFunc func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error)
+	UpdateStatusFunc func(in1 *v1a.State) (*v1a.State, error)
 
 	// UpdaterFunc mocks the Updater method.
 	UpdaterFunc func() generic.Updater
@@ -183,7 +183,7 @@ type ExecutionRunControllerMock struct {
 		// Create holds details about calls to the Create method.
 		Create []struct {
 			// In1 is the in1 argument value.
-			In1 *v1a.ExecutionRun
+			In1 *v1a.State
 		}
 		// Delete holds details about calls to the Delete method.
 		Delete []struct {
@@ -230,7 +230,7 @@ type ExecutionRunControllerMock struct {
 			// Name is the name argument value.
 			Name string
 			// Sync is the sync argument value.
-			Sync v1.ExecutionRunHandler
+			Sync v1.StateHandler
 		}
 		// OnRemove holds details about calls to the OnRemove method.
 		OnRemove []struct {
@@ -239,7 +239,7 @@ type ExecutionRunControllerMock struct {
 			// Name is the name argument value.
 			Name string
 			// Sync is the sync argument value.
-			Sync v1.ExecutionRunHandler
+			Sync v1.StateHandler
 		}
 		// Patch holds details about calls to the Patch method.
 		Patch []struct {
@@ -257,12 +257,12 @@ type ExecutionRunControllerMock struct {
 		// Update holds details about calls to the Update method.
 		Update []struct {
 			// In1 is the in1 argument value.
-			In1 *v1a.ExecutionRun
+			In1 *v1a.State
 		}
 		// UpdateStatus holds details about calls to the UpdateStatus method.
 		UpdateStatus []struct {
 			// In1 is the in1 argument value.
-			In1 *v1a.ExecutionRun
+			In1 *v1a.State
 		}
 		// Updater holds details about calls to the Updater method.
 		Updater []struct {
@@ -278,9 +278,9 @@ type ExecutionRunControllerMock struct {
 }
 
 // AddGenericHandler calls AddGenericHandlerFunc.
-func (mock *ExecutionRunControllerMock) AddGenericHandler(ctx context.Context, name string, handler generic.Handler) {
+func (mock *StateControllerMock) AddGenericHandler(ctx context.Context, name string, handler generic.Handler) {
 	if mock.AddGenericHandlerFunc == nil {
-		panic("ExecutionRunControllerMock.AddGenericHandlerFunc: method is nil but ExecutionRunController.AddGenericHandler was just called")
+		panic("StateControllerMock.AddGenericHandlerFunc: method is nil but StateController.AddGenericHandler was just called")
 	}
 	callInfo := struct {
 		Ctx     context.Context
@@ -291,16 +291,16 @@ func (mock *ExecutionRunControllerMock) AddGenericHandler(ctx context.Context, n
 		Name:    name,
 		Handler: handler,
 	}
-	lockExecutionRunControllerMockAddGenericHandler.Lock()
+	lockStateControllerMockAddGenericHandler.Lock()
 	mock.calls.AddGenericHandler = append(mock.calls.AddGenericHandler, callInfo)
-	lockExecutionRunControllerMockAddGenericHandler.Unlock()
+	lockStateControllerMockAddGenericHandler.Unlock()
 	mock.AddGenericHandlerFunc(ctx, name, handler)
 }
 
 // AddGenericHandlerCalls gets all the calls that were made to AddGenericHandler.
 // Check the length with:
-//     len(mockedExecutionRunController.AddGenericHandlerCalls())
-func (mock *ExecutionRunControllerMock) AddGenericHandlerCalls() []struct {
+//     len(mockedStateController.AddGenericHandlerCalls())
+func (mock *StateControllerMock) AddGenericHandlerCalls() []struct {
 	Ctx     context.Context
 	Name    string
 	Handler generic.Handler
@@ -310,16 +310,16 @@ func (mock *ExecutionRunControllerMock) AddGenericHandlerCalls() []struct {
 		Name    string
 		Handler generic.Handler
 	}
-	lockExecutionRunControllerMockAddGenericHandler.RLock()
+	lockStateControllerMockAddGenericHandler.RLock()
 	calls = mock.calls.AddGenericHandler
-	lockExecutionRunControllerMockAddGenericHandler.RUnlock()
+	lockStateControllerMockAddGenericHandler.RUnlock()
 	return calls
 }
 
 // AddGenericRemoveHandler calls AddGenericRemoveHandlerFunc.
-func (mock *ExecutionRunControllerMock) AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler) {
+func (mock *StateControllerMock) AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler) {
 	if mock.AddGenericRemoveHandlerFunc == nil {
-		panic("ExecutionRunControllerMock.AddGenericRemoveHandlerFunc: method is nil but ExecutionRunController.AddGenericRemoveHandler was just called")
+		panic("StateControllerMock.AddGenericRemoveHandlerFunc: method is nil but StateController.AddGenericRemoveHandler was just called")
 	}
 	callInfo := struct {
 		Ctx     context.Context
@@ -330,16 +330,16 @@ func (mock *ExecutionRunControllerMock) AddGenericRemoveHandler(ctx context.Cont
 		Name:    name,
 		Handler: handler,
 	}
-	lockExecutionRunControllerMockAddGenericRemoveHandler.Lock()
+	lockStateControllerMockAddGenericRemoveHandler.Lock()
 	mock.calls.AddGenericRemoveHandler = append(mock.calls.AddGenericRemoveHandler, callInfo)
-	lockExecutionRunControllerMockAddGenericRemoveHandler.Unlock()
+	lockStateControllerMockAddGenericRemoveHandler.Unlock()
 	mock.AddGenericRemoveHandlerFunc(ctx, name, handler)
 }
 
 // AddGenericRemoveHandlerCalls gets all the calls that were made to AddGenericRemoveHandler.
 // Check the length with:
-//     len(mockedExecutionRunController.AddGenericRemoveHandlerCalls())
-func (mock *ExecutionRunControllerMock) AddGenericRemoveHandlerCalls() []struct {
+//     len(mockedStateController.AddGenericRemoveHandlerCalls())
+func (mock *StateControllerMock) AddGenericRemoveHandlerCalls() []struct {
 	Ctx     context.Context
 	Name    string
 	Handler generic.Handler
@@ -349,73 +349,73 @@ func (mock *ExecutionRunControllerMock) AddGenericRemoveHandlerCalls() []struct 
 		Name    string
 		Handler generic.Handler
 	}
-	lockExecutionRunControllerMockAddGenericRemoveHandler.RLock()
+	lockStateControllerMockAddGenericRemoveHandler.RLock()
 	calls = mock.calls.AddGenericRemoveHandler
-	lockExecutionRunControllerMockAddGenericRemoveHandler.RUnlock()
+	lockStateControllerMockAddGenericRemoveHandler.RUnlock()
 	return calls
 }
 
 // Cache calls CacheFunc.
-func (mock *ExecutionRunControllerMock) Cache() v1.ExecutionRunCache {
+func (mock *StateControllerMock) Cache() v1.StateCache {
 	if mock.CacheFunc == nil {
-		panic("ExecutionRunControllerMock.CacheFunc: method is nil but ExecutionRunController.Cache was just called")
+		panic("StateControllerMock.CacheFunc: method is nil but StateController.Cache was just called")
 	}
 	callInfo := struct {
 	}{}
-	lockExecutionRunControllerMockCache.Lock()
+	lockStateControllerMockCache.Lock()
 	mock.calls.Cache = append(mock.calls.Cache, callInfo)
-	lockExecutionRunControllerMockCache.Unlock()
+	lockStateControllerMockCache.Unlock()
 	return mock.CacheFunc()
 }
 
 // CacheCalls gets all the calls that were made to Cache.
 // Check the length with:
-//     len(mockedExecutionRunController.CacheCalls())
-func (mock *ExecutionRunControllerMock) CacheCalls() []struct {
+//     len(mockedStateController.CacheCalls())
+func (mock *StateControllerMock) CacheCalls() []struct {
 } {
 	var calls []struct {
 	}
-	lockExecutionRunControllerMockCache.RLock()
+	lockStateControllerMockCache.RLock()
 	calls = mock.calls.Cache
-	lockExecutionRunControllerMockCache.RUnlock()
+	lockStateControllerMockCache.RUnlock()
 	return calls
 }
 
 // Create calls CreateFunc.
-func (mock *ExecutionRunControllerMock) Create(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+func (mock *StateControllerMock) Create(in1 *v1a.State) (*v1a.State, error) {
 	if mock.CreateFunc == nil {
-		panic("ExecutionRunControllerMock.CreateFunc: method is nil but ExecutionRunController.Create was just called")
+		panic("StateControllerMock.CreateFunc: method is nil but StateController.Create was just called")
 	}
 	callInfo := struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}{
 		In1: in1,
 	}
-	lockExecutionRunControllerMockCreate.Lock()
+	lockStateControllerMockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, callInfo)
-	lockExecutionRunControllerMockCreate.Unlock()
+	lockStateControllerMockCreate.Unlock()
 	return mock.CreateFunc(in1)
 }
 
 // CreateCalls gets all the calls that were made to Create.
 // Check the length with:
-//     len(mockedExecutionRunController.CreateCalls())
-func (mock *ExecutionRunControllerMock) CreateCalls() []struct {
-	In1 *v1a.ExecutionRun
+//     len(mockedStateController.CreateCalls())
+func (mock *StateControllerMock) CreateCalls() []struct {
+	In1 *v1a.State
 } {
 	var calls []struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}
-	lockExecutionRunControllerMockCreate.RLock()
+	lockStateControllerMockCreate.RLock()
 	calls = mock.calls.Create
-	lockExecutionRunControllerMockCreate.RUnlock()
+	lockStateControllerMockCreate.RUnlock()
 	return calls
 }
 
 // Delete calls DeleteFunc.
-func (mock *ExecutionRunControllerMock) Delete(namespace string, name string, options *v1b.DeleteOptions) error {
+func (mock *StateControllerMock) Delete(namespace string, name string, options *v1b.DeleteOptions) error {
 	if mock.DeleteFunc == nil {
-		panic("ExecutionRunControllerMock.DeleteFunc: method is nil but ExecutionRunController.Delete was just called")
+		panic("StateControllerMock.DeleteFunc: method is nil but StateController.Delete was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -426,16 +426,16 @@ func (mock *ExecutionRunControllerMock) Delete(namespace string, name string, op
 		Name:      name,
 		Options:   options,
 	}
-	lockExecutionRunControllerMockDelete.Lock()
+	lockStateControllerMockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, callInfo)
-	lockExecutionRunControllerMockDelete.Unlock()
+	lockStateControllerMockDelete.Unlock()
 	return mock.DeleteFunc(namespace, name, options)
 }
 
 // DeleteCalls gets all the calls that were made to Delete.
 // Check the length with:
-//     len(mockedExecutionRunController.DeleteCalls())
-func (mock *ExecutionRunControllerMock) DeleteCalls() []struct {
+//     len(mockedStateController.DeleteCalls())
+func (mock *StateControllerMock) DeleteCalls() []struct {
 	Namespace string
 	Name      string
 	Options   *v1b.DeleteOptions
@@ -445,16 +445,16 @@ func (mock *ExecutionRunControllerMock) DeleteCalls() []struct {
 		Name      string
 		Options   *v1b.DeleteOptions
 	}
-	lockExecutionRunControllerMockDelete.RLock()
+	lockStateControllerMockDelete.RLock()
 	calls = mock.calls.Delete
-	lockExecutionRunControllerMockDelete.RUnlock()
+	lockStateControllerMockDelete.RUnlock()
 	return calls
 }
 
 // Enqueue calls EnqueueFunc.
-func (mock *ExecutionRunControllerMock) Enqueue(namespace string, name string) {
+func (mock *StateControllerMock) Enqueue(namespace string, name string) {
 	if mock.EnqueueFunc == nil {
-		panic("ExecutionRunControllerMock.EnqueueFunc: method is nil but ExecutionRunController.Enqueue was just called")
+		panic("StateControllerMock.EnqueueFunc: method is nil but StateController.Enqueue was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -463,16 +463,16 @@ func (mock *ExecutionRunControllerMock) Enqueue(namespace string, name string) {
 		Namespace: namespace,
 		Name:      name,
 	}
-	lockExecutionRunControllerMockEnqueue.Lock()
+	lockStateControllerMockEnqueue.Lock()
 	mock.calls.Enqueue = append(mock.calls.Enqueue, callInfo)
-	lockExecutionRunControllerMockEnqueue.Unlock()
+	lockStateControllerMockEnqueue.Unlock()
 	mock.EnqueueFunc(namespace, name)
 }
 
 // EnqueueCalls gets all the calls that were made to Enqueue.
 // Check the length with:
-//     len(mockedExecutionRunController.EnqueueCalls())
-func (mock *ExecutionRunControllerMock) EnqueueCalls() []struct {
+//     len(mockedStateController.EnqueueCalls())
+func (mock *StateControllerMock) EnqueueCalls() []struct {
 	Namespace string
 	Name      string
 } {
@@ -480,16 +480,16 @@ func (mock *ExecutionRunControllerMock) EnqueueCalls() []struct {
 		Namespace string
 		Name      string
 	}
-	lockExecutionRunControllerMockEnqueue.RLock()
+	lockStateControllerMockEnqueue.RLock()
 	calls = mock.calls.Enqueue
-	lockExecutionRunControllerMockEnqueue.RUnlock()
+	lockStateControllerMockEnqueue.RUnlock()
 	return calls
 }
 
 // Get calls GetFunc.
-func (mock *ExecutionRunControllerMock) Get(namespace string, name string, options v1b.GetOptions) (*v1a.ExecutionRun, error) {
+func (mock *StateControllerMock) Get(namespace string, name string, options v1b.GetOptions) (*v1a.State, error) {
 	if mock.GetFunc == nil {
-		panic("ExecutionRunControllerMock.GetFunc: method is nil but ExecutionRunController.Get was just called")
+		panic("StateControllerMock.GetFunc: method is nil but StateController.Get was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -500,16 +500,16 @@ func (mock *ExecutionRunControllerMock) Get(namespace string, name string, optio
 		Name:      name,
 		Options:   options,
 	}
-	lockExecutionRunControllerMockGet.Lock()
+	lockStateControllerMockGet.Lock()
 	mock.calls.Get = append(mock.calls.Get, callInfo)
-	lockExecutionRunControllerMockGet.Unlock()
+	lockStateControllerMockGet.Unlock()
 	return mock.GetFunc(namespace, name, options)
 }
 
 // GetCalls gets all the calls that were made to Get.
 // Check the length with:
-//     len(mockedExecutionRunController.GetCalls())
-func (mock *ExecutionRunControllerMock) GetCalls() []struct {
+//     len(mockedStateController.GetCalls())
+func (mock *StateControllerMock) GetCalls() []struct {
 	Namespace string
 	Name      string
 	Options   v1b.GetOptions
@@ -519,68 +519,68 @@ func (mock *ExecutionRunControllerMock) GetCalls() []struct {
 		Name      string
 		Options   v1b.GetOptions
 	}
-	lockExecutionRunControllerMockGet.RLock()
+	lockStateControllerMockGet.RLock()
 	calls = mock.calls.Get
-	lockExecutionRunControllerMockGet.RUnlock()
+	lockStateControllerMockGet.RUnlock()
 	return calls
 }
 
 // GroupVersionKind calls GroupVersionKindFunc.
-func (mock *ExecutionRunControllerMock) GroupVersionKind() schema.GroupVersionKind {
+func (mock *StateControllerMock) GroupVersionKind() schema.GroupVersionKind {
 	if mock.GroupVersionKindFunc == nil {
-		panic("ExecutionRunControllerMock.GroupVersionKindFunc: method is nil but ExecutionRunController.GroupVersionKind was just called")
+		panic("StateControllerMock.GroupVersionKindFunc: method is nil but StateController.GroupVersionKind was just called")
 	}
 	callInfo := struct {
 	}{}
-	lockExecutionRunControllerMockGroupVersionKind.Lock()
+	lockStateControllerMockGroupVersionKind.Lock()
 	mock.calls.GroupVersionKind = append(mock.calls.GroupVersionKind, callInfo)
-	lockExecutionRunControllerMockGroupVersionKind.Unlock()
+	lockStateControllerMockGroupVersionKind.Unlock()
 	return mock.GroupVersionKindFunc()
 }
 
 // GroupVersionKindCalls gets all the calls that were made to GroupVersionKind.
 // Check the length with:
-//     len(mockedExecutionRunController.GroupVersionKindCalls())
-func (mock *ExecutionRunControllerMock) GroupVersionKindCalls() []struct {
+//     len(mockedStateController.GroupVersionKindCalls())
+func (mock *StateControllerMock) GroupVersionKindCalls() []struct {
 } {
 	var calls []struct {
 	}
-	lockExecutionRunControllerMockGroupVersionKind.RLock()
+	lockStateControllerMockGroupVersionKind.RLock()
 	calls = mock.calls.GroupVersionKind
-	lockExecutionRunControllerMockGroupVersionKind.RUnlock()
+	lockStateControllerMockGroupVersionKind.RUnlock()
 	return calls
 }
 
 // Informer calls InformerFunc.
-func (mock *ExecutionRunControllerMock) Informer() cache.SharedIndexInformer {
+func (mock *StateControllerMock) Informer() cache.SharedIndexInformer {
 	if mock.InformerFunc == nil {
-		panic("ExecutionRunControllerMock.InformerFunc: method is nil but ExecutionRunController.Informer was just called")
+		panic("StateControllerMock.InformerFunc: method is nil but StateController.Informer was just called")
 	}
 	callInfo := struct {
 	}{}
-	lockExecutionRunControllerMockInformer.Lock()
+	lockStateControllerMockInformer.Lock()
 	mock.calls.Informer = append(mock.calls.Informer, callInfo)
-	lockExecutionRunControllerMockInformer.Unlock()
+	lockStateControllerMockInformer.Unlock()
 	return mock.InformerFunc()
 }
 
 // InformerCalls gets all the calls that were made to Informer.
 // Check the length with:
-//     len(mockedExecutionRunController.InformerCalls())
-func (mock *ExecutionRunControllerMock) InformerCalls() []struct {
+//     len(mockedStateController.InformerCalls())
+func (mock *StateControllerMock) InformerCalls() []struct {
 } {
 	var calls []struct {
 	}
-	lockExecutionRunControllerMockInformer.RLock()
+	lockStateControllerMockInformer.RLock()
 	calls = mock.calls.Informer
-	lockExecutionRunControllerMockInformer.RUnlock()
+	lockStateControllerMockInformer.RUnlock()
 	return calls
 }
 
 // List calls ListFunc.
-func (mock *ExecutionRunControllerMock) List(namespace string, opts v1b.ListOptions) (*v1a.ExecutionRunList, error) {
+func (mock *StateControllerMock) List(namespace string, opts v1b.ListOptions) (*v1a.StateList, error) {
 	if mock.ListFunc == nil {
-		panic("ExecutionRunControllerMock.ListFunc: method is nil but ExecutionRunController.List was just called")
+		panic("StateControllerMock.ListFunc: method is nil but StateController.List was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -589,16 +589,16 @@ func (mock *ExecutionRunControllerMock) List(namespace string, opts v1b.ListOpti
 		Namespace: namespace,
 		Opts:      opts,
 	}
-	lockExecutionRunControllerMockList.Lock()
+	lockStateControllerMockList.Lock()
 	mock.calls.List = append(mock.calls.List, callInfo)
-	lockExecutionRunControllerMockList.Unlock()
+	lockStateControllerMockList.Unlock()
 	return mock.ListFunc(namespace, opts)
 }
 
 // ListCalls gets all the calls that were made to List.
 // Check the length with:
-//     len(mockedExecutionRunController.ListCalls())
-func (mock *ExecutionRunControllerMock) ListCalls() []struct {
+//     len(mockedStateController.ListCalls())
+func (mock *StateControllerMock) ListCalls() []struct {
 	Namespace string
 	Opts      v1b.ListOptions
 } {
@@ -606,94 +606,94 @@ func (mock *ExecutionRunControllerMock) ListCalls() []struct {
 		Namespace string
 		Opts      v1b.ListOptions
 	}
-	lockExecutionRunControllerMockList.RLock()
+	lockStateControllerMockList.RLock()
 	calls = mock.calls.List
-	lockExecutionRunControllerMockList.RUnlock()
+	lockStateControllerMockList.RUnlock()
 	return calls
 }
 
 // OnChange calls OnChangeFunc.
-func (mock *ExecutionRunControllerMock) OnChange(ctx context.Context, name string, sync v1.ExecutionRunHandler) {
+func (mock *StateControllerMock) OnChange(ctx context.Context, name string, sync v1.StateHandler) {
 	if mock.OnChangeFunc == nil {
-		panic("ExecutionRunControllerMock.OnChangeFunc: method is nil but ExecutionRunController.OnChange was just called")
+		panic("StateControllerMock.OnChangeFunc: method is nil but StateController.OnChange was just called")
 	}
 	callInfo := struct {
 		Ctx  context.Context
 		Name string
-		Sync v1.ExecutionRunHandler
+		Sync v1.StateHandler
 	}{
 		Ctx:  ctx,
 		Name: name,
 		Sync: sync,
 	}
-	lockExecutionRunControllerMockOnChange.Lock()
+	lockStateControllerMockOnChange.Lock()
 	mock.calls.OnChange = append(mock.calls.OnChange, callInfo)
-	lockExecutionRunControllerMockOnChange.Unlock()
+	lockStateControllerMockOnChange.Unlock()
 	mock.OnChangeFunc(ctx, name, sync)
 }
 
 // OnChangeCalls gets all the calls that were made to OnChange.
 // Check the length with:
-//     len(mockedExecutionRunController.OnChangeCalls())
-func (mock *ExecutionRunControllerMock) OnChangeCalls() []struct {
+//     len(mockedStateController.OnChangeCalls())
+func (mock *StateControllerMock) OnChangeCalls() []struct {
 	Ctx  context.Context
 	Name string
-	Sync v1.ExecutionRunHandler
+	Sync v1.StateHandler
 } {
 	var calls []struct {
 		Ctx  context.Context
 		Name string
-		Sync v1.ExecutionRunHandler
+		Sync v1.StateHandler
 	}
-	lockExecutionRunControllerMockOnChange.RLock()
+	lockStateControllerMockOnChange.RLock()
 	calls = mock.calls.OnChange
-	lockExecutionRunControllerMockOnChange.RUnlock()
+	lockStateControllerMockOnChange.RUnlock()
 	return calls
 }
 
 // OnRemove calls OnRemoveFunc.
-func (mock *ExecutionRunControllerMock) OnRemove(ctx context.Context, name string, sync v1.ExecutionRunHandler) {
+func (mock *StateControllerMock) OnRemove(ctx context.Context, name string, sync v1.StateHandler) {
 	if mock.OnRemoveFunc == nil {
-		panic("ExecutionRunControllerMock.OnRemoveFunc: method is nil but ExecutionRunController.OnRemove was just called")
+		panic("StateControllerMock.OnRemoveFunc: method is nil but StateController.OnRemove was just called")
 	}
 	callInfo := struct {
 		Ctx  context.Context
 		Name string
-		Sync v1.ExecutionRunHandler
+		Sync v1.StateHandler
 	}{
 		Ctx:  ctx,
 		Name: name,
 		Sync: sync,
 	}
-	lockExecutionRunControllerMockOnRemove.Lock()
+	lockStateControllerMockOnRemove.Lock()
 	mock.calls.OnRemove = append(mock.calls.OnRemove, callInfo)
-	lockExecutionRunControllerMockOnRemove.Unlock()
+	lockStateControllerMockOnRemove.Unlock()
 	mock.OnRemoveFunc(ctx, name, sync)
 }
 
 // OnRemoveCalls gets all the calls that were made to OnRemove.
 // Check the length with:
-//     len(mockedExecutionRunController.OnRemoveCalls())
-func (mock *ExecutionRunControllerMock) OnRemoveCalls() []struct {
+//     len(mockedStateController.OnRemoveCalls())
+func (mock *StateControllerMock) OnRemoveCalls() []struct {
 	Ctx  context.Context
 	Name string
-	Sync v1.ExecutionRunHandler
+	Sync v1.StateHandler
 } {
 	var calls []struct {
 		Ctx  context.Context
 		Name string
-		Sync v1.ExecutionRunHandler
+		Sync v1.StateHandler
 	}
-	lockExecutionRunControllerMockOnRemove.RLock()
+	lockStateControllerMockOnRemove.RLock()
 	calls = mock.calls.OnRemove
-	lockExecutionRunControllerMockOnRemove.RUnlock()
+	lockStateControllerMockOnRemove.RUnlock()
 	return calls
 }
 
 // Patch calls PatchFunc.
-func (mock *ExecutionRunControllerMock) Patch(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.ExecutionRun, error) {
+func (mock *StateControllerMock) Patch(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.State, error) {
 	if mock.PatchFunc == nil {
-		panic("ExecutionRunControllerMock.PatchFunc: method is nil but ExecutionRunController.Patch was just called")
+		panic("StateControllerMock.PatchFunc: method is nil but StateController.Patch was just called")
 	}
 	callInfo := struct {
 		Namespace    string
@@ -708,16 +708,16 @@ func (mock *ExecutionRunControllerMock) Patch(namespace string, name string, pt 
 		Data:         data,
 		Subresources: subresources,
 	}
-	lockExecutionRunControllerMockPatch.Lock()
+	lockStateControllerMockPatch.Lock()
 	mock.calls.Patch = append(mock.calls.Patch, callInfo)
-	lockExecutionRunControllerMockPatch.Unlock()
+	lockStateControllerMockPatch.Unlock()
 	return mock.PatchFunc(namespace, name, pt, data, subresources...)
 }
 
 // PatchCalls gets all the calls that were made to Patch.
 // Check the length with:
-//     len(mockedExecutionRunController.PatchCalls())
-func (mock *ExecutionRunControllerMock) PatchCalls() []struct {
+//     len(mockedStateController.PatchCalls())
+func (mock *StateControllerMock) PatchCalls() []struct {
 	Namespace    string
 	Name         string
 	Pt           types.PatchType
@@ -731,104 +731,104 @@ func (mock *ExecutionRunControllerMock) PatchCalls() []struct {
 		Data         []byte
 		Subresources []string
 	}
-	lockExecutionRunControllerMockPatch.RLock()
+	lockStateControllerMockPatch.RLock()
 	calls = mock.calls.Patch
-	lockExecutionRunControllerMockPatch.RUnlock()
+	lockStateControllerMockPatch.RUnlock()
 	return calls
 }
 
 // Update calls UpdateFunc.
-func (mock *ExecutionRunControllerMock) Update(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+func (mock *StateControllerMock) Update(in1 *v1a.State) (*v1a.State, error) {
 	if mock.UpdateFunc == nil {
-		panic("ExecutionRunControllerMock.UpdateFunc: method is nil but ExecutionRunController.Update was just called")
+		panic("StateControllerMock.UpdateFunc: method is nil but StateController.Update was just called")
 	}
 	callInfo := struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}{
 		In1: in1,
 	}
-	lockExecutionRunControllerMockUpdate.Lock()
+	lockStateControllerMockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, callInfo)
-	lockExecutionRunControllerMockUpdate.Unlock()
+	lockStateControllerMockUpdate.Unlock()
 	return mock.UpdateFunc(in1)
 }
 
 // UpdateCalls gets all the calls that were made to Update.
 // Check the length with:
-//     len(mockedExecutionRunController.UpdateCalls())
-func (mock *ExecutionRunControllerMock) UpdateCalls() []struct {
-	In1 *v1a.ExecutionRun
+//     len(mockedStateController.UpdateCalls())
+func (mock *StateControllerMock) UpdateCalls() []struct {
+	In1 *v1a.State
 } {
 	var calls []struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}
-	lockExecutionRunControllerMockUpdate.RLock()
+	lockStateControllerMockUpdate.RLock()
 	calls = mock.calls.Update
-	lockExecutionRunControllerMockUpdate.RUnlock()
+	lockStateControllerMockUpdate.RUnlock()
 	return calls
 }
 
 // UpdateStatus calls UpdateStatusFunc.
-func (mock *ExecutionRunControllerMock) UpdateStatus(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+func (mock *StateControllerMock) UpdateStatus(in1 *v1a.State) (*v1a.State, error) {
 	if mock.UpdateStatusFunc == nil {
-		panic("ExecutionRunControllerMock.UpdateStatusFunc: method is nil but ExecutionRunController.UpdateStatus was just called")
+		panic("StateControllerMock.UpdateStatusFunc: method is nil but StateController.UpdateStatus was just called")
 	}
 	callInfo := struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}{
 		In1: in1,
 	}
-	lockExecutionRunControllerMockUpdateStatus.Lock()
+	lockStateControllerMockUpdateStatus.Lock()
 	mock.calls.UpdateStatus = append(mock.calls.UpdateStatus, callInfo)
-	lockExecutionRunControllerMockUpdateStatus.Unlock()
+	lockStateControllerMockUpdateStatus.Unlock()
 	return mock.UpdateStatusFunc(in1)
 }
 
 // UpdateStatusCalls gets all the calls that were made to UpdateStatus.
 // Check the length with:
-//     len(mockedExecutionRunController.UpdateStatusCalls())
-func (mock *ExecutionRunControllerMock) UpdateStatusCalls() []struct {
-	In1 *v1a.ExecutionRun
+//     len(mockedStateController.UpdateStatusCalls())
+func (mock *StateControllerMock) UpdateStatusCalls() []struct {
+	In1 *v1a.State
 } {
 	var calls []struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}
-	lockExecutionRunControllerMockUpdateStatus.RLock()
+	lockStateControllerMockUpdateStatus.RLock()
 	calls = mock.calls.UpdateStatus
-	lockExecutionRunControllerMockUpdateStatus.RUnlock()
+	lockStateControllerMockUpdateStatus.RUnlock()
 	return calls
 }
 
 // Updater calls UpdaterFunc.
-func (mock *ExecutionRunControllerMock) Updater() generic.Updater {
+func (mock *StateControllerMock) Updater() generic.Updater {
 	if mock.UpdaterFunc == nil {
-		panic("ExecutionRunControllerMock.UpdaterFunc: method is nil but ExecutionRunController.Updater was just called")
+		panic("StateControllerMock.UpdaterFunc: method is nil but StateController.Updater was just called")
 	}
 	callInfo := struct {
 	}{}
-	lockExecutionRunControllerMockUpdater.Lock()
+	lockStateControllerMockUpdater.Lock()
 	mock.calls.Updater = append(mock.calls.Updater, callInfo)
-	lockExecutionRunControllerMockUpdater.Unlock()
+	lockStateControllerMockUpdater.Unlock()
 	return mock.UpdaterFunc()
 }
 
 // UpdaterCalls gets all the calls that were made to Updater.
 // Check the length with:
-//     len(mockedExecutionRunController.UpdaterCalls())
-func (mock *ExecutionRunControllerMock) UpdaterCalls() []struct {
+//     len(mockedStateController.UpdaterCalls())
+func (mock *StateControllerMock) UpdaterCalls() []struct {
 } {
 	var calls []struct {
 	}
-	lockExecutionRunControllerMockUpdater.RLock()
+	lockStateControllerMockUpdater.RLock()
 	calls = mock.calls.Updater
-	lockExecutionRunControllerMockUpdater.RUnlock()
+	lockStateControllerMockUpdater.RUnlock()
 	return calls
 }
 
 // Watch calls WatchFunc.
-func (mock *ExecutionRunControllerMock) Watch(namespace string, opts v1b.ListOptions) (watch.Interface, error) {
+func (mock *StateControllerMock) Watch(namespace string, opts v1b.ListOptions) (watch.Interface, error) {
 	if mock.WatchFunc == nil {
-		panic("ExecutionRunControllerMock.WatchFunc: method is nil but ExecutionRunController.Watch was just called")
+		panic("StateControllerMock.WatchFunc: method is nil but StateController.Watch was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -837,16 +837,16 @@ func (mock *ExecutionRunControllerMock) Watch(namespace string, opts v1b.ListOpt
 		Namespace: namespace,
 		Opts:      opts,
 	}
-	lockExecutionRunControllerMockWatch.Lock()
+	lockStateControllerMockWatch.Lock()
 	mock.calls.Watch = append(mock.calls.Watch, callInfo)
-	lockExecutionRunControllerMockWatch.Unlock()
+	lockStateControllerMockWatch.Unlock()
 	return mock.WatchFunc(namespace, opts)
 }
 
 // WatchCalls gets all the calls that were made to Watch.
 // Check the length with:
-//     len(mockedExecutionRunController.WatchCalls())
-func (mock *ExecutionRunControllerMock) WatchCalls() []struct {
+//     len(mockedStateController.WatchCalls())
+func (mock *StateControllerMock) WatchCalls() []struct {
 	Namespace string
 	Opts      v1b.ListOptions
 } {
@@ -854,52 +854,52 @@ func (mock *ExecutionRunControllerMock) WatchCalls() []struct {
 		Namespace string
 		Opts      v1b.ListOptions
 	}
-	lockExecutionRunControllerMockWatch.RLock()
+	lockStateControllerMockWatch.RLock()
 	calls = mock.calls.Watch
-	lockExecutionRunControllerMockWatch.RUnlock()
+	lockStateControllerMockWatch.RUnlock()
 	return calls
 }
 
 var (
-	lockExecutionRunClientMockCreate       sync.RWMutex
-	lockExecutionRunClientMockDelete       sync.RWMutex
-	lockExecutionRunClientMockGet          sync.RWMutex
-	lockExecutionRunClientMockList         sync.RWMutex
-	lockExecutionRunClientMockPatch        sync.RWMutex
-	lockExecutionRunClientMockUpdate       sync.RWMutex
-	lockExecutionRunClientMockUpdateStatus sync.RWMutex
-	lockExecutionRunClientMockWatch        sync.RWMutex
+	lockStateClientMockCreate       sync.RWMutex
+	lockStateClientMockDelete       sync.RWMutex
+	lockStateClientMockGet          sync.RWMutex
+	lockStateClientMockList         sync.RWMutex
+	lockStateClientMockPatch        sync.RWMutex
+	lockStateClientMockUpdate       sync.RWMutex
+	lockStateClientMockUpdateStatus sync.RWMutex
+	lockStateClientMockWatch        sync.RWMutex
 )
 
-// Ensure, that ExecutionRunClientMock does implement ExecutionRunClient.
+// Ensure, that StateClientMock does implement StateClient.
 // If this is not the case, regenerate this file with moq.
-var _ v1.ExecutionRunClient = &ExecutionRunClientMock{}
+var _ v1.StateClient = &StateClientMock{}
 
-// ExecutionRunClientMock is a mock implementation of ExecutionRunClient.
+// StateClientMock is a mock implementation of StateClient.
 //
-//     func TestSomethingThatUsesExecutionRunClient(t *testing.T) {
+//     func TestSomethingThatUsesStateClient(t *testing.T) {
 //
-//         // make and configure a mocked ExecutionRunClient
-//         mockedExecutionRunClient := &ExecutionRunClientMock{
-//             CreateFunc: func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+//         // make and configure a mocked StateClient
+//         mockedStateClient := &StateClientMock{
+//             CreateFunc: func(in1 *v1a.State) (*v1a.State, error) {
 // 	               panic("mock out the Create method")
 //             },
 //             DeleteFunc: func(namespace string, name string, options *v1b.DeleteOptions) error {
 // 	               panic("mock out the Delete method")
 //             },
-//             GetFunc: func(namespace string, name string, options v1b.GetOptions) (*v1a.ExecutionRun, error) {
+//             GetFunc: func(namespace string, name string, options v1b.GetOptions) (*v1a.State, error) {
 // 	               panic("mock out the Get method")
 //             },
-//             ListFunc: func(namespace string, opts v1b.ListOptions) (*v1a.ExecutionRunList, error) {
+//             ListFunc: func(namespace string, opts v1b.ListOptions) (*v1a.StateList, error) {
 // 	               panic("mock out the List method")
 //             },
-//             PatchFunc: func(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.ExecutionRun, error) {
+//             PatchFunc: func(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.State, error) {
 // 	               panic("mock out the Patch method")
 //             },
-//             UpdateFunc: func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+//             UpdateFunc: func(in1 *v1a.State) (*v1a.State, error) {
 // 	               panic("mock out the Update method")
 //             },
-//             UpdateStatusFunc: func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+//             UpdateStatusFunc: func(in1 *v1a.State) (*v1a.State, error) {
 // 	               panic("mock out the UpdateStatus method")
 //             },
 //             WatchFunc: func(namespace string, opts v1b.ListOptions) (watch.Interface, error) {
@@ -907,31 +907,31 @@ var _ v1.ExecutionRunClient = &ExecutionRunClientMock{}
 //             },
 //         }
 //
-//         // use mockedExecutionRunClient in code that requires ExecutionRunClient
+//         // use mockedStateClient in code that requires StateClient
 //         // and then make assertions.
 //
 //     }
-type ExecutionRunClientMock struct {
+type StateClientMock struct {
 	// CreateFunc mocks the Create method.
-	CreateFunc func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error)
+	CreateFunc func(in1 *v1a.State) (*v1a.State, error)
 
 	// DeleteFunc mocks the Delete method.
 	DeleteFunc func(namespace string, name string, options *v1b.DeleteOptions) error
 
 	// GetFunc mocks the Get method.
-	GetFunc func(namespace string, name string, options v1b.GetOptions) (*v1a.ExecutionRun, error)
+	GetFunc func(namespace string, name string, options v1b.GetOptions) (*v1a.State, error)
 
 	// ListFunc mocks the List method.
-	ListFunc func(namespace string, opts v1b.ListOptions) (*v1a.ExecutionRunList, error)
+	ListFunc func(namespace string, opts v1b.ListOptions) (*v1a.StateList, error)
 
 	// PatchFunc mocks the Patch method.
-	PatchFunc func(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.ExecutionRun, error)
+	PatchFunc func(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.State, error)
 
 	// UpdateFunc mocks the Update method.
-	UpdateFunc func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error)
+	UpdateFunc func(in1 *v1a.State) (*v1a.State, error)
 
 	// UpdateStatusFunc mocks the UpdateStatus method.
-	UpdateStatusFunc func(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error)
+	UpdateStatusFunc func(in1 *v1a.State) (*v1a.State, error)
 
 	// WatchFunc mocks the Watch method.
 	WatchFunc func(namespace string, opts v1b.ListOptions) (watch.Interface, error)
@@ -941,7 +941,7 @@ type ExecutionRunClientMock struct {
 		// Create holds details about calls to the Create method.
 		Create []struct {
 			// In1 is the in1 argument value.
-			In1 *v1a.ExecutionRun
+			In1 *v1a.State
 		}
 		// Delete holds details about calls to the Delete method.
 		Delete []struct {
@@ -984,12 +984,12 @@ type ExecutionRunClientMock struct {
 		// Update holds details about calls to the Update method.
 		Update []struct {
 			// In1 is the in1 argument value.
-			In1 *v1a.ExecutionRun
+			In1 *v1a.State
 		}
 		// UpdateStatus holds details about calls to the UpdateStatus method.
 		UpdateStatus []struct {
 			// In1 is the in1 argument value.
-			In1 *v1a.ExecutionRun
+			In1 *v1a.State
 		}
 		// Watch holds details about calls to the Watch method.
 		Watch []struct {
@@ -1002,40 +1002,40 @@ type ExecutionRunClientMock struct {
 }
 
 // Create calls CreateFunc.
-func (mock *ExecutionRunClientMock) Create(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+func (mock *StateClientMock) Create(in1 *v1a.State) (*v1a.State, error) {
 	if mock.CreateFunc == nil {
-		panic("ExecutionRunClientMock.CreateFunc: method is nil but ExecutionRunClient.Create was just called")
+		panic("StateClientMock.CreateFunc: method is nil but StateClient.Create was just called")
 	}
 	callInfo := struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}{
 		In1: in1,
 	}
-	lockExecutionRunClientMockCreate.Lock()
+	lockStateClientMockCreate.Lock()
 	mock.calls.Create = append(mock.calls.Create, callInfo)
-	lockExecutionRunClientMockCreate.Unlock()
+	lockStateClientMockCreate.Unlock()
 	return mock.CreateFunc(in1)
 }
 
 // CreateCalls gets all the calls that were made to Create.
 // Check the length with:
-//     len(mockedExecutionRunClient.CreateCalls())
-func (mock *ExecutionRunClientMock) CreateCalls() []struct {
-	In1 *v1a.ExecutionRun
+//     len(mockedStateClient.CreateCalls())
+func (mock *StateClientMock) CreateCalls() []struct {
+	In1 *v1a.State
 } {
 	var calls []struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}
-	lockExecutionRunClientMockCreate.RLock()
+	lockStateClientMockCreate.RLock()
 	calls = mock.calls.Create
-	lockExecutionRunClientMockCreate.RUnlock()
+	lockStateClientMockCreate.RUnlock()
 	return calls
 }
 
 // Delete calls DeleteFunc.
-func (mock *ExecutionRunClientMock) Delete(namespace string, name string, options *v1b.DeleteOptions) error {
+func (mock *StateClientMock) Delete(namespace string, name string, options *v1b.DeleteOptions) error {
 	if mock.DeleteFunc == nil {
-		panic("ExecutionRunClientMock.DeleteFunc: method is nil but ExecutionRunClient.Delete was just called")
+		panic("StateClientMock.DeleteFunc: method is nil but StateClient.Delete was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -1046,16 +1046,16 @@ func (mock *ExecutionRunClientMock) Delete(namespace string, name string, option
 		Name:      name,
 		Options:   options,
 	}
-	lockExecutionRunClientMockDelete.Lock()
+	lockStateClientMockDelete.Lock()
 	mock.calls.Delete = append(mock.calls.Delete, callInfo)
-	lockExecutionRunClientMockDelete.Unlock()
+	lockStateClientMockDelete.Unlock()
 	return mock.DeleteFunc(namespace, name, options)
 }
 
 // DeleteCalls gets all the calls that were made to Delete.
 // Check the length with:
-//     len(mockedExecutionRunClient.DeleteCalls())
-func (mock *ExecutionRunClientMock) DeleteCalls() []struct {
+//     len(mockedStateClient.DeleteCalls())
+func (mock *StateClientMock) DeleteCalls() []struct {
 	Namespace string
 	Name      string
 	Options   *v1b.DeleteOptions
@@ -1065,16 +1065,16 @@ func (mock *ExecutionRunClientMock) DeleteCalls() []struct {
 		Name      string
 		Options   *v1b.DeleteOptions
 	}
-	lockExecutionRunClientMockDelete.RLock()
+	lockStateClientMockDelete.RLock()
 	calls = mock.calls.Delete
-	lockExecutionRunClientMockDelete.RUnlock()
+	lockStateClientMockDelete.RUnlock()
 	return calls
 }
 
 // Get calls GetFunc.
-func (mock *ExecutionRunClientMock) Get(namespace string, name string, options v1b.GetOptions) (*v1a.ExecutionRun, error) {
+func (mock *StateClientMock) Get(namespace string, name string, options v1b.GetOptions) (*v1a.State, error) {
 	if mock.GetFunc == nil {
-		panic("ExecutionRunClientMock.GetFunc: method is nil but ExecutionRunClient.Get was just called")
+		panic("StateClientMock.GetFunc: method is nil but StateClient.Get was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -1085,16 +1085,16 @@ func (mock *ExecutionRunClientMock) Get(namespace string, name string, options v
 		Name:      name,
 		Options:   options,
 	}
-	lockExecutionRunClientMockGet.Lock()
+	lockStateClientMockGet.Lock()
 	mock.calls.Get = append(mock.calls.Get, callInfo)
-	lockExecutionRunClientMockGet.Unlock()
+	lockStateClientMockGet.Unlock()
 	return mock.GetFunc(namespace, name, options)
 }
 
 // GetCalls gets all the calls that were made to Get.
 // Check the length with:
-//     len(mockedExecutionRunClient.GetCalls())
-func (mock *ExecutionRunClientMock) GetCalls() []struct {
+//     len(mockedStateClient.GetCalls())
+func (mock *StateClientMock) GetCalls() []struct {
 	Namespace string
 	Name      string
 	Options   v1b.GetOptions
@@ -1104,16 +1104,16 @@ func (mock *ExecutionRunClientMock) GetCalls() []struct {
 		Name      string
 		Options   v1b.GetOptions
 	}
-	lockExecutionRunClientMockGet.RLock()
+	lockStateClientMockGet.RLock()
 	calls = mock.calls.Get
-	lockExecutionRunClientMockGet.RUnlock()
+	lockStateClientMockGet.RUnlock()
 	return calls
 }
 
 // List calls ListFunc.
-func (mock *ExecutionRunClientMock) List(namespace string, opts v1b.ListOptions) (*v1a.ExecutionRunList, error) {
+func (mock *StateClientMock) List(namespace string, opts v1b.ListOptions) (*v1a.StateList, error) {
 	if mock.ListFunc == nil {
-		panic("ExecutionRunClientMock.ListFunc: method is nil but ExecutionRunClient.List was just called")
+		panic("StateClientMock.ListFunc: method is nil but StateClient.List was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -1122,16 +1122,16 @@ func (mock *ExecutionRunClientMock) List(namespace string, opts v1b.ListOptions)
 		Namespace: namespace,
 		Opts:      opts,
 	}
-	lockExecutionRunClientMockList.Lock()
+	lockStateClientMockList.Lock()
 	mock.calls.List = append(mock.calls.List, callInfo)
-	lockExecutionRunClientMockList.Unlock()
+	lockStateClientMockList.Unlock()
 	return mock.ListFunc(namespace, opts)
 }
 
 // ListCalls gets all the calls that were made to List.
 // Check the length with:
-//     len(mockedExecutionRunClient.ListCalls())
-func (mock *ExecutionRunClientMock) ListCalls() []struct {
+//     len(mockedStateClient.ListCalls())
+func (mock *StateClientMock) ListCalls() []struct {
 	Namespace string
 	Opts      v1b.ListOptions
 } {
@@ -1139,16 +1139,16 @@ func (mock *ExecutionRunClientMock) ListCalls() []struct {
 		Namespace string
 		Opts      v1b.ListOptions
 	}
-	lockExecutionRunClientMockList.RLock()
+	lockStateClientMockList.RLock()
 	calls = mock.calls.List
-	lockExecutionRunClientMockList.RUnlock()
+	lockStateClientMockList.RUnlock()
 	return calls
 }
 
 // Patch calls PatchFunc.
-func (mock *ExecutionRunClientMock) Patch(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.ExecutionRun, error) {
+func (mock *StateClientMock) Patch(namespace string, name string, pt types.PatchType, data []byte, subresources ...string) (*v1a.State, error) {
 	if mock.PatchFunc == nil {
-		panic("ExecutionRunClientMock.PatchFunc: method is nil but ExecutionRunClient.Patch was just called")
+		panic("StateClientMock.PatchFunc: method is nil but StateClient.Patch was just called")
 	}
 	callInfo := struct {
 		Namespace    string
@@ -1163,16 +1163,16 @@ func (mock *ExecutionRunClientMock) Patch(namespace string, name string, pt type
 		Data:         data,
 		Subresources: subresources,
 	}
-	lockExecutionRunClientMockPatch.Lock()
+	lockStateClientMockPatch.Lock()
 	mock.calls.Patch = append(mock.calls.Patch, callInfo)
-	lockExecutionRunClientMockPatch.Unlock()
+	lockStateClientMockPatch.Unlock()
 	return mock.PatchFunc(namespace, name, pt, data, subresources...)
 }
 
 // PatchCalls gets all the calls that were made to Patch.
 // Check the length with:
-//     len(mockedExecutionRunClient.PatchCalls())
-func (mock *ExecutionRunClientMock) PatchCalls() []struct {
+//     len(mockedStateClient.PatchCalls())
+func (mock *StateClientMock) PatchCalls() []struct {
 	Namespace    string
 	Name         string
 	Pt           types.PatchType
@@ -1186,78 +1186,78 @@ func (mock *ExecutionRunClientMock) PatchCalls() []struct {
 		Data         []byte
 		Subresources []string
 	}
-	lockExecutionRunClientMockPatch.RLock()
+	lockStateClientMockPatch.RLock()
 	calls = mock.calls.Patch
-	lockExecutionRunClientMockPatch.RUnlock()
+	lockStateClientMockPatch.RUnlock()
 	return calls
 }
 
 // Update calls UpdateFunc.
-func (mock *ExecutionRunClientMock) Update(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+func (mock *StateClientMock) Update(in1 *v1a.State) (*v1a.State, error) {
 	if mock.UpdateFunc == nil {
-		panic("ExecutionRunClientMock.UpdateFunc: method is nil but ExecutionRunClient.Update was just called")
+		panic("StateClientMock.UpdateFunc: method is nil but StateClient.Update was just called")
 	}
 	callInfo := struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}{
 		In1: in1,
 	}
-	lockExecutionRunClientMockUpdate.Lock()
+	lockStateClientMockUpdate.Lock()
 	mock.calls.Update = append(mock.calls.Update, callInfo)
-	lockExecutionRunClientMockUpdate.Unlock()
+	lockStateClientMockUpdate.Unlock()
 	return mock.UpdateFunc(in1)
 }
 
 // UpdateCalls gets all the calls that were made to Update.
 // Check the length with:
-//     len(mockedExecutionRunClient.UpdateCalls())
-func (mock *ExecutionRunClientMock) UpdateCalls() []struct {
-	In1 *v1a.ExecutionRun
+//     len(mockedStateClient.UpdateCalls())
+func (mock *StateClientMock) UpdateCalls() []struct {
+	In1 *v1a.State
 } {
 	var calls []struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}
-	lockExecutionRunClientMockUpdate.RLock()
+	lockStateClientMockUpdate.RLock()
 	calls = mock.calls.Update
-	lockExecutionRunClientMockUpdate.RUnlock()
+	lockStateClientMockUpdate.RUnlock()
 	return calls
 }
 
 // UpdateStatus calls UpdateStatusFunc.
-func (mock *ExecutionRunClientMock) UpdateStatus(in1 *v1a.ExecutionRun) (*v1a.ExecutionRun, error) {
+func (mock *StateClientMock) UpdateStatus(in1 *v1a.State) (*v1a.State, error) {
 	if mock.UpdateStatusFunc == nil {
-		panic("ExecutionRunClientMock.UpdateStatusFunc: method is nil but ExecutionRunClient.UpdateStatus was just called")
+		panic("StateClientMock.UpdateStatusFunc: method is nil but StateClient.UpdateStatus was just called")
 	}
 	callInfo := struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}{
 		In1: in1,
 	}
-	lockExecutionRunClientMockUpdateStatus.Lock()
+	lockStateClientMockUpdateStatus.Lock()
 	mock.calls.UpdateStatus = append(mock.calls.UpdateStatus, callInfo)
-	lockExecutionRunClientMockUpdateStatus.Unlock()
+	lockStateClientMockUpdateStatus.Unlock()
 	return mock.UpdateStatusFunc(in1)
 }
 
 // UpdateStatusCalls gets all the calls that were made to UpdateStatus.
 // Check the length with:
-//     len(mockedExecutionRunClient.UpdateStatusCalls())
-func (mock *ExecutionRunClientMock) UpdateStatusCalls() []struct {
-	In1 *v1a.ExecutionRun
+//     len(mockedStateClient.UpdateStatusCalls())
+func (mock *StateClientMock) UpdateStatusCalls() []struct {
+	In1 *v1a.State
 } {
 	var calls []struct {
-		In1 *v1a.ExecutionRun
+		In1 *v1a.State
 	}
-	lockExecutionRunClientMockUpdateStatus.RLock()
+	lockStateClientMockUpdateStatus.RLock()
 	calls = mock.calls.UpdateStatus
-	lockExecutionRunClientMockUpdateStatus.RUnlock()
+	lockStateClientMockUpdateStatus.RUnlock()
 	return calls
 }
 
 // Watch calls WatchFunc.
-func (mock *ExecutionRunClientMock) Watch(namespace string, opts v1b.ListOptions) (watch.Interface, error) {
+func (mock *StateClientMock) Watch(namespace string, opts v1b.ListOptions) (watch.Interface, error) {
 	if mock.WatchFunc == nil {
-		panic("ExecutionRunClientMock.WatchFunc: method is nil but ExecutionRunClient.Watch was just called")
+		panic("StateClientMock.WatchFunc: method is nil but StateClient.Watch was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -1266,16 +1266,16 @@ func (mock *ExecutionRunClientMock) Watch(namespace string, opts v1b.ListOptions
 		Namespace: namespace,
 		Opts:      opts,
 	}
-	lockExecutionRunClientMockWatch.Lock()
+	lockStateClientMockWatch.Lock()
 	mock.calls.Watch = append(mock.calls.Watch, callInfo)
-	lockExecutionRunClientMockWatch.Unlock()
+	lockStateClientMockWatch.Unlock()
 	return mock.WatchFunc(namespace, opts)
 }
 
 // WatchCalls gets all the calls that were made to Watch.
 // Check the length with:
-//     len(mockedExecutionRunClient.WatchCalls())
-func (mock *ExecutionRunClientMock) WatchCalls() []struct {
+//     len(mockedStateClient.WatchCalls())
+func (mock *StateClientMock) WatchCalls() []struct {
 	Namespace string
 	Opts      v1b.ListOptions
 } {
@@ -1283,59 +1283,59 @@ func (mock *ExecutionRunClientMock) WatchCalls() []struct {
 		Namespace string
 		Opts      v1b.ListOptions
 	}
-	lockExecutionRunClientMockWatch.RLock()
+	lockStateClientMockWatch.RLock()
 	calls = mock.calls.Watch
-	lockExecutionRunClientMockWatch.RUnlock()
+	lockStateClientMockWatch.RUnlock()
 	return calls
 }
 
 var (
-	lockExecutionRunCacheMockAddIndexer sync.RWMutex
-	lockExecutionRunCacheMockGet        sync.RWMutex
-	lockExecutionRunCacheMockGetByIndex sync.RWMutex
-	lockExecutionRunCacheMockList       sync.RWMutex
+	lockStateCacheMockAddIndexer sync.RWMutex
+	lockStateCacheMockGet        sync.RWMutex
+	lockStateCacheMockGetByIndex sync.RWMutex
+	lockStateCacheMockList       sync.RWMutex
 )
 
-// Ensure, that ExecutionRunCacheMock does implement ExecutionRunCache.
+// Ensure, that StateCacheMock does implement StateCache.
 // If this is not the case, regenerate this file with moq.
-var _ v1.ExecutionRunCache = &ExecutionRunCacheMock{}
+var _ v1.StateCache = &StateCacheMock{}
 
-// ExecutionRunCacheMock is a mock implementation of ExecutionRunCache.
+// StateCacheMock is a mock implementation of StateCache.
 //
-//     func TestSomethingThatUsesExecutionRunCache(t *testing.T) {
+//     func TestSomethingThatUsesStateCache(t *testing.T) {
 //
-//         // make and configure a mocked ExecutionRunCache
-//         mockedExecutionRunCache := &ExecutionRunCacheMock{
-//             AddIndexerFunc: func(indexName string, indexer v1.ExecutionRunIndexer)  {
+//         // make and configure a mocked StateCache
+//         mockedStateCache := &StateCacheMock{
+//             AddIndexerFunc: func(indexName string, indexer v1.StateIndexer)  {
 // 	               panic("mock out the AddIndexer method")
 //             },
-//             GetFunc: func(namespace string, name string) (*v1a.ExecutionRun, error) {
+//             GetFunc: func(namespace string, name string) (*v1a.State, error) {
 // 	               panic("mock out the Get method")
 //             },
-//             GetByIndexFunc: func(indexName string, key string) ([]*v1a.ExecutionRun, error) {
+//             GetByIndexFunc: func(indexName string, key string) ([]*v1a.State, error) {
 // 	               panic("mock out the GetByIndex method")
 //             },
-//             ListFunc: func(namespace string, selector labels.Selector) ([]*v1a.ExecutionRun, error) {
+//             ListFunc: func(namespace string, selector labels.Selector) ([]*v1a.State, error) {
 // 	               panic("mock out the List method")
 //             },
 //         }
 //
-//         // use mockedExecutionRunCache in code that requires ExecutionRunCache
+//         // use mockedStateCache in code that requires StateCache
 //         // and then make assertions.
 //
 //     }
-type ExecutionRunCacheMock struct {
+type StateCacheMock struct {
 	// AddIndexerFunc mocks the AddIndexer method.
-	AddIndexerFunc func(indexName string, indexer v1.ExecutionRunIndexer)
+	AddIndexerFunc func(indexName string, indexer v1.StateIndexer)
 
 	// GetFunc mocks the Get method.
-	GetFunc func(namespace string, name string) (*v1a.ExecutionRun, error)
+	GetFunc func(namespace string, name string) (*v1a.State, error)
 
 	// GetByIndexFunc mocks the GetByIndex method.
-	GetByIndexFunc func(indexName string, key string) ([]*v1a.ExecutionRun, error)
+	GetByIndexFunc func(indexName string, key string) ([]*v1a.State, error)
 
 	// ListFunc mocks the List method.
-	ListFunc func(namespace string, selector labels.Selector) ([]*v1a.ExecutionRun, error)
+	ListFunc func(namespace string, selector labels.Selector) ([]*v1a.State, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -1344,7 +1344,7 @@ type ExecutionRunCacheMock struct {
 			// IndexName is the indexName argument value.
 			IndexName string
 			// Indexer is the indexer argument value.
-			Indexer v1.ExecutionRunIndexer
+			Indexer v1.StateIndexer
 		}
 		// Get holds details about calls to the Get method.
 		Get []struct {
@@ -1371,44 +1371,44 @@ type ExecutionRunCacheMock struct {
 }
 
 // AddIndexer calls AddIndexerFunc.
-func (mock *ExecutionRunCacheMock) AddIndexer(indexName string, indexer v1.ExecutionRunIndexer) {
+func (mock *StateCacheMock) AddIndexer(indexName string, indexer v1.StateIndexer) {
 	if mock.AddIndexerFunc == nil {
-		panic("ExecutionRunCacheMock.AddIndexerFunc: method is nil but ExecutionRunCache.AddIndexer was just called")
+		panic("StateCacheMock.AddIndexerFunc: method is nil but StateCache.AddIndexer was just called")
 	}
 	callInfo := struct {
 		IndexName string
-		Indexer   v1.ExecutionRunIndexer
+		Indexer   v1.StateIndexer
 	}{
 		IndexName: indexName,
 		Indexer:   indexer,
 	}
-	lockExecutionRunCacheMockAddIndexer.Lock()
+	lockStateCacheMockAddIndexer.Lock()
 	mock.calls.AddIndexer = append(mock.calls.AddIndexer, callInfo)
-	lockExecutionRunCacheMockAddIndexer.Unlock()
+	lockStateCacheMockAddIndexer.Unlock()
 	mock.AddIndexerFunc(indexName, indexer)
 }
 
 // AddIndexerCalls gets all the calls that were made to AddIndexer.
 // Check the length with:
-//     len(mockedExecutionRunCache.AddIndexerCalls())
-func (mock *ExecutionRunCacheMock) AddIndexerCalls() []struct {
+//     len(mockedStateCache.AddIndexerCalls())
+func (mock *StateCacheMock) AddIndexerCalls() []struct {
 	IndexName string
-	Indexer   v1.ExecutionRunIndexer
+	Indexer   v1.StateIndexer
 } {
 	var calls []struct {
 		IndexName string
-		Indexer   v1.ExecutionRunIndexer
+		Indexer   v1.StateIndexer
 	}
-	lockExecutionRunCacheMockAddIndexer.RLock()
+	lockStateCacheMockAddIndexer.RLock()
 	calls = mock.calls.AddIndexer
-	lockExecutionRunCacheMockAddIndexer.RUnlock()
+	lockStateCacheMockAddIndexer.RUnlock()
 	return calls
 }
 
 // Get calls GetFunc.
-func (mock *ExecutionRunCacheMock) Get(namespace string, name string) (*v1a.ExecutionRun, error) {
+func (mock *StateCacheMock) Get(namespace string, name string) (*v1a.State, error) {
 	if mock.GetFunc == nil {
-		panic("ExecutionRunCacheMock.GetFunc: method is nil but ExecutionRunCache.Get was just called")
+		panic("StateCacheMock.GetFunc: method is nil but StateCache.Get was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -1417,16 +1417,16 @@ func (mock *ExecutionRunCacheMock) Get(namespace string, name string) (*v1a.Exec
 		Namespace: namespace,
 		Name:      name,
 	}
-	lockExecutionRunCacheMockGet.Lock()
+	lockStateCacheMockGet.Lock()
 	mock.calls.Get = append(mock.calls.Get, callInfo)
-	lockExecutionRunCacheMockGet.Unlock()
+	lockStateCacheMockGet.Unlock()
 	return mock.GetFunc(namespace, name)
 }
 
 // GetCalls gets all the calls that were made to Get.
 // Check the length with:
-//     len(mockedExecutionRunCache.GetCalls())
-func (mock *ExecutionRunCacheMock) GetCalls() []struct {
+//     len(mockedStateCache.GetCalls())
+func (mock *StateCacheMock) GetCalls() []struct {
 	Namespace string
 	Name      string
 } {
@@ -1434,16 +1434,16 @@ func (mock *ExecutionRunCacheMock) GetCalls() []struct {
 		Namespace string
 		Name      string
 	}
-	lockExecutionRunCacheMockGet.RLock()
+	lockStateCacheMockGet.RLock()
 	calls = mock.calls.Get
-	lockExecutionRunCacheMockGet.RUnlock()
+	lockStateCacheMockGet.RUnlock()
 	return calls
 }
 
 // GetByIndex calls GetByIndexFunc.
-func (mock *ExecutionRunCacheMock) GetByIndex(indexName string, key string) ([]*v1a.ExecutionRun, error) {
+func (mock *StateCacheMock) GetByIndex(indexName string, key string) ([]*v1a.State, error) {
 	if mock.GetByIndexFunc == nil {
-		panic("ExecutionRunCacheMock.GetByIndexFunc: method is nil but ExecutionRunCache.GetByIndex was just called")
+		panic("StateCacheMock.GetByIndexFunc: method is nil but StateCache.GetByIndex was just called")
 	}
 	callInfo := struct {
 		IndexName string
@@ -1452,16 +1452,16 @@ func (mock *ExecutionRunCacheMock) GetByIndex(indexName string, key string) ([]*
 		IndexName: indexName,
 		Key:       key,
 	}
-	lockExecutionRunCacheMockGetByIndex.Lock()
+	lockStateCacheMockGetByIndex.Lock()
 	mock.calls.GetByIndex = append(mock.calls.GetByIndex, callInfo)
-	lockExecutionRunCacheMockGetByIndex.Unlock()
+	lockStateCacheMockGetByIndex.Unlock()
 	return mock.GetByIndexFunc(indexName, key)
 }
 
 // GetByIndexCalls gets all the calls that were made to GetByIndex.
 // Check the length with:
-//     len(mockedExecutionRunCache.GetByIndexCalls())
-func (mock *ExecutionRunCacheMock) GetByIndexCalls() []struct {
+//     len(mockedStateCache.GetByIndexCalls())
+func (mock *StateCacheMock) GetByIndexCalls() []struct {
 	IndexName string
 	Key       string
 } {
@@ -1469,16 +1469,16 @@ func (mock *ExecutionRunCacheMock) GetByIndexCalls() []struct {
 		IndexName string
 		Key       string
 	}
-	lockExecutionRunCacheMockGetByIndex.RLock()
+	lockStateCacheMockGetByIndex.RLock()
 	calls = mock.calls.GetByIndex
-	lockExecutionRunCacheMockGetByIndex.RUnlock()
+	lockStateCacheMockGetByIndex.RUnlock()
 	return calls
 }
 
 // List calls ListFunc.
-func (mock *ExecutionRunCacheMock) List(namespace string, selector labels.Selector) ([]*v1a.ExecutionRun, error) {
+func (mock *StateCacheMock) List(namespace string, selector labels.Selector) ([]*v1a.State, error) {
 	if mock.ListFunc == nil {
-		panic("ExecutionRunCacheMock.ListFunc: method is nil but ExecutionRunCache.List was just called")
+		panic("StateCacheMock.ListFunc: method is nil but StateCache.List was just called")
 	}
 	callInfo := struct {
 		Namespace string
@@ -1487,16 +1487,16 @@ func (mock *ExecutionRunCacheMock) List(namespace string, selector labels.Select
 		Namespace: namespace,
 		Selector:  selector,
 	}
-	lockExecutionRunCacheMockList.Lock()
+	lockStateCacheMockList.Lock()
 	mock.calls.List = append(mock.calls.List, callInfo)
-	lockExecutionRunCacheMockList.Unlock()
+	lockStateCacheMockList.Unlock()
 	return mock.ListFunc(namespace, selector)
 }
 
 // ListCalls gets all the calls that were made to List.
 // Check the length with:
-//     len(mockedExecutionRunCache.ListCalls())
-func (mock *ExecutionRunCacheMock) ListCalls() []struct {
+//     len(mockedStateCache.ListCalls())
+func (mock *StateCacheMock) ListCalls() []struct {
 	Namespace string
 	Selector  labels.Selector
 } {
@@ -1504,8 +1504,8 @@ func (mock *ExecutionRunCacheMock) ListCalls() []struct {
 		Namespace string
 		Selector  labels.Selector
 	}
-	lockExecutionRunCacheMockList.RLock()
+	lockStateCacheMockList.RLock()
 	calls = mock.calls.List
-	lockExecutionRunCacheMockList.RUnlock()
+	lockStateCacheMockList.RUnlock()
 	return calls
 }
