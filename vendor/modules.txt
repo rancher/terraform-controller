@@ -86,17 +86,18 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/transform
 # golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20190328211700-ab21143f2384
+# golang.org/x/tools v0.0.0-20190521203540-521d6ed310dd
 golang.org/x/tools/imports
 golang.org/x/tools/go/packages
-golang.org/x/tools/go/ast/astutil
-golang.org/x/tools/internal/gopathwalk
-golang.org/x/tools/internal/module
+golang.org/x/tools/internal/imports
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/packagesdriver
+golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/semver
-golang.org/x/tools/internal/fastwalk
+golang.org/x/tools/go/ast/astutil
+golang.org/x/tools/internal/module
 golang.org/x/tools/go/internal/gcimporter
+golang.org/x/tools/internal/fastwalk
 # google.golang.org/appengine v1.4.0
 google.golang.org/appengine/urlfetch
 google.golang.org/appengine/internal

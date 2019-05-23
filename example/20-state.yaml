@@ -1,7 +1,7 @@
 apiVersion: terraformcontroller.cattle.io/v1
-kind: Execution
+kind: State
 metadata:
-  name: my-execution
+  name: my-state
 spec:
   moduleName: my-module
   destroyOnDelete: true
