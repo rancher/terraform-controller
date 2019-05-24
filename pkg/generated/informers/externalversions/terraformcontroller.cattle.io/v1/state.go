@@ -31,59 +31,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// ExecutionRunInformer provides access to a shared informer and lister for
-// ExecutionRuns.
-type ExecutionRunInformer interface {
+// StateInformer provides access to a shared informer and lister for
+// States.
+type StateInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.ExecutionRunLister
+	Lister() v1.StateLister
 }
 
-type executionRunInformer struct {
+type stateInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewExecutionRunInformer constructs a new informer for ExecutionRun type.
+// NewStateInformer constructs a new informer for State type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewExecutionRunInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredExecutionRunInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewStateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredStateInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredExecutionRunInformer constructs a new informer for ExecutionRun type.
+// NewFilteredStateInformer constructs a new informer for State type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredExecutionRunInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredStateInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TerraformcontrollerV1().ExecutionRuns(namespace).List(options)
+				return client.TerraformcontrollerV1().States(namespace).List(options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TerraformcontrollerV1().ExecutionRuns(namespace).Watch(options)
+				return client.TerraformcontrollerV1().States(namespace).Watch(options)
 			},
 		},
-		&terraformcontrollercattleiov1.ExecutionRun{},
+		&terraformcontrollercattleiov1.State{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *executionRunInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredExecutionRunInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *stateInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredStateInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *executionRunInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&terraformcontrollercattleiov1.ExecutionRun{}, f.defaultInformer)
+func (f *stateInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&terraformcontrollercattleiov1.State{}, f.defaultInformer)
 }
 
-func (f *executionRunInformer) Lister() v1.ExecutionRunLister {
-	return v1.NewExecutionRunLister(f.Informer().GetIndexer())
+func (f *stateInformer) Lister() v1.StateLister {
+	return v1.NewStateLister(f.Informer().GetIndexer())
 }

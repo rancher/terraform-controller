@@ -27,8 +27,8 @@ import (
 
 type Interface interface {
 	Execution() ExecutionController
-	ExecutionRun() ExecutionRunController
 	Module() ModuleController
+	State() StateController
 }
 
 func New(controllerManager *generic.ControllerManager, client clientset.TerraformcontrollerV1Interface,
@@ -49,9 +49,9 @@ type version struct {
 func (c *version) Execution() ExecutionController {
 	return NewExecutionController(v1.SchemeGroupVersion.WithKind("Execution"), c.controllerManager, c.client, c.informers.Executions())
 }
-func (c *version) ExecutionRun() ExecutionRunController {
-	return NewExecutionRunController(v1.SchemeGroupVersion.WithKind("ExecutionRun"), c.controllerManager, c.client, c.informers.ExecutionRuns())
-}
 func (c *version) Module() ModuleController {
 	return NewModuleController(v1.SchemeGroupVersion.WithKind("Module"), c.controllerManager, c.client, c.informers.Modules())
+}
+func (c *version) State() StateController {
+	return NewStateController(v1.SchemeGroupVersion.WithKind("State"), c.controllerManager, c.client, c.informers.States())
 }

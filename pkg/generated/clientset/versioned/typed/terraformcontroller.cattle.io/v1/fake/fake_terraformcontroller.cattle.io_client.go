@@ -32,12 +32,12 @@ func (c *FakeTerraformcontrollerV1) Executions(namespace string) v1.ExecutionInt
 	return &FakeExecutions{c, namespace}
 }
 
-func (c *FakeTerraformcontrollerV1) ExecutionRuns(namespace string) v1.ExecutionRunInterface {
-	return &FakeExecutionRuns{c, namespace}
-}
-
 func (c *FakeTerraformcontrollerV1) Modules(namespace string) v1.ModuleInterface {
 	return &FakeModules{c, namespace}
+}
+
+func (c *FakeTerraformcontrollerV1) States(namespace string) v1.StateInterface {
+	return &FakeStates{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

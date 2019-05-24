@@ -85,6 +85,8 @@ func run(c *cli.Context) {
 	masterurl := c.String("masterurl")
 	ns := c.String("namespace")
 
+	logrus.Printf("Booting Terraform Controller, namespace: %s", ns)
+
 	ctx := signals.SetupSignalHandler(context.Background())
 
 	cfg, err := clientcmd.BuildConfigFromFlags(masterurl, kubeconfig)
@@ -113,9 +115,9 @@ func run(c *cli.Context) {
 	}
 
 	terraform.Register(ctx,
-		tfFactory.Terraformcontroller().V1().Execution(),
 		tfFactory.Terraformcontroller().V1().Module(),
-		tfFactory.Terraformcontroller().V1().ExecutionRun(),
+		tfFactory.Terraformcontroller().V1().State(),
+		tfFactory.Terraformcontroller().V1().Execution(),
 		rbacFactory.Rbac().V1().ClusterRole(),
 		rbacFactory.Rbac().V1().ClusterRoleBinding(),
 		coreFactory.Core().V1().Secret(),

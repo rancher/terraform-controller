@@ -55,10 +55,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=terraformcontroller.cattle.io, Version=v1
 	case v1.SchemeGroupVersion.WithResource("executions"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Terraformcontroller().V1().Executions().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("executionruns"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Terraformcontroller().V1().ExecutionRuns().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("modules"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Terraformcontroller().V1().Modules().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("states"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Terraformcontroller().V1().States().Informer()}, nil
 
 	}
 

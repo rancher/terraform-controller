@@ -28,8 +28,8 @@ import (
 type TerraformcontrollerV1Interface interface {
 	RESTClient() rest.Interface
 	ExecutionsGetter
-	ExecutionRunsGetter
 	ModulesGetter
+	StatesGetter
 }
 
 // TerraformcontrollerV1Client is used to interact with features provided by the terraformcontroller.cattle.io group.
@@ -41,12 +41,12 @@ func (c *TerraformcontrollerV1Client) Executions(namespace string) ExecutionInte
 	return newExecutions(c, namespace)
 }
 
-func (c *TerraformcontrollerV1Client) ExecutionRuns(namespace string) ExecutionRunInterface {
-	return newExecutionRuns(c, namespace)
-}
-
 func (c *TerraformcontrollerV1Client) Modules(namespace string) ModuleInterface {
 	return newModules(c, namespace)
+}
+
+func (c *TerraformcontrollerV1Client) States(namespace string) StateInterface {
+	return newStates(c, namespace)
 }
 
 // NewForConfig creates a new TerraformcontrollerV1Client for the given config.

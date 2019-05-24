@@ -34,15 +34,15 @@ or 'no' if not approved. If set to 'no' the job will exit without making any cha
 )
 
 type Runner struct {
-	Action        string
-	Namespace     string
-	ExecutionRun  *v1.ExecutionRun
-	GitAuth       *git.Auth
-	K8sClient     *kubernetes.Clientset
-	executionRuns tfv1.ExecutionRunController
-	secrets       corev1.SecretController
-	jobs          batchv1.JobController
-	VarSecret     *coreV1.Secret
+	Action     string
+	Namespace  string
+	Execution  *v1.Execution
+	GitAuth    *git.Auth
+	K8sClient  *kubernetes.Clientset
+	executions tfv1.ExecutionController
+	secrets    corev1.SecretController
+	jobs       batchv1.JobController
+	VarSecret  *coreV1.Secret
 }
 
 // NewRunner returns a runner with the k8s clients populated
@@ -64,7 +64,7 @@ func NewRunner(config *rest.Config) (*Runner, error) {
 		logrus.Fatalf("Error building terraform controllers: %s", err.Error())
 	}
 
-	r.executionRuns = tfFactory.Terraformcontroller().V1().ExecutionRun()
+	r.executions = tfFactory.Terraformcontroller().V1().Execution()
 	r.secrets = coreFactory.Core().V1().Secret()
 	r.jobs = batchFactory.Batch().V1().Job()
 
@@ -93,13 +93,13 @@ func (r *Runner) Create() (string, error) {
 	}
 
 	// We have autoConfirm, run apply
-	if r.ExecutionRun.Spec.AutoConfirm {
+	if r.Execution.Spec.AutoConfirm {
 		logrus.Info("We have autoConfirm, running apply")
 		return terraform.Apply()
 	}
 
 	// Need to wait for approval before running apply
-	approval, ok := r.ExecutionRun.Annotations["approved"]
+	approval, ok := r.Execution.Annotations["approved"]
 	if !ok || approval == "" {
 		fmt.Print(approvalMessage)
 		approval, err = r.waitForApproval()
@@ -132,13 +132,13 @@ func (r *Runner) Destroy() (string, error) {
 	fmt.Println(out)
 
 	// We have autoConfirm, run destroy
-	if r.ExecutionRun.Spec.AutoConfirm {
+	if r.Execution.Spec.AutoConfirm {
 		logrus.Info("We have autoConfirm, running destroy")
 		return terraform.Destroy()
 	}
 
 	// Need to wait for approval before running apply
-	approval, ok := r.ExecutionRun.Annotations["approved"]
+	approval, ok := r.Execution.Annotations["approved"]
 	if !ok || approval == "" {
 		fmt.Print(approvalMessage)
 		approval, err = r.waitForApproval()
@@ -165,19 +165,19 @@ func (r *Runner) SaveOutputs() error {
 	}
 
 	return tryUpdate(func() error {
-		run, err := r.executionRuns.Get(r.ExecutionRun.Namespace, r.ExecutionRun.Name, metaV1.GetOptions{})
+		run, err := r.executions.Get(r.Execution.Namespace, r.Execution.Name, metaV1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		run.Status.Outputs = output
 
-		_, err = r.executionRuns.Update(run)
+		_, err = r.executions.Update(run)
 		if err != nil {
 			return err
 		}
 		// Update runner so we have the fresh version
-		r.ExecutionRun = run
+		r.Execution = run
 		return nil
 	})
 }
@@ -205,10 +205,10 @@ func (r *Runner) Populate() error {
 	if err != nil {
 		return err
 	}
-	r.ExecutionRun = run
+	r.Execution = run
 
-	if r.ExecutionRun.Spec.Content.Git.SecretName != "" {
-		gSecret, err := r.getSecret(r.ExecutionRun.Spec.Content.Git.SecretName)
+	if r.Execution.Spec.Content.Git.SecretName != "" {
+		gSecret, err := r.getSecret(r.Execution.Spec.Content.Git.SecretName)
 		if err != nil {
 			return err
 		}
@@ -221,7 +221,7 @@ func (r *Runner) Populate() error {
 		r.GitAuth = &git.Auth{}
 	}
 
-	vSecret, err := r.getSecret(r.ExecutionRun.Spec.SecretName)
+	vSecret, err := r.getSecret(r.Execution.Spec.SecretName)
 
 	if err != nil {
 		return err
@@ -233,7 +233,7 @@ func (r *Runner) Populate() error {
 
 func (r *Runner) SetExecutionRunStatus(s string) error {
 	return tryUpdate(func() error {
-		run, err := r.getExecutionRun(r.Namespace, r.ExecutionRun.Name)
+		run, err := r.getExecutionRun(r.Namespace, r.Execution.Name)
 		if err != nil {
 			return err
 		}
@@ -247,11 +247,11 @@ func (r *Runner) SetExecutionRunStatus(s string) error {
 			return fmt.Errorf("unknown execution run status: %v", s)
 		}
 
-		run, err = r.executionRuns.Update(run)
+		run, err = r.executions.Update(run)
 		if err != nil {
 			return err
 		}
-		r.ExecutionRun = run
+		r.Execution = run
 		return nil
 	})
 }
@@ -261,8 +261,8 @@ func (r *Runner) WriteConfigFile() error {
 		Terraform: Terraform{
 			Backend: map[string]*Backend{
 				"kubernetes": &Backend{
-					Key:            r.ExecutionRun.Spec.ExecutionName,
-					Namespace:      r.ExecutionRun.Namespace,
+					Key:            r.Execution.Spec.ExecutionName,
+					Namespace:      r.Execution.Namespace,
 					ServiceAccount: "true",
 				},
 			},
@@ -288,7 +288,7 @@ func (r *Runner) WriteVarFile() error {
 	if !ok {
 		return fmt.Errorf("no varFile data found in secret %v", r.VarSecret.Name)
 	}
-	err := writer.Write(vars, fmt.Sprintf("/root/module/%v.auto.tfvars", r.ExecutionRun.Name))
+	err := writer.Write(vars, fmt.Sprintf("/root/module/%v.auto.tfvars", r.Execution.Name))
 	if err != nil {
 		return err
 	}
@@ -296,7 +296,7 @@ func (r *Runner) WriteVarFile() error {
 }
 
 func (r *Runner) DeleteJob() error {
-	jobName := "job-" + r.ExecutionRun.Name
+	jobName := "job-" + r.Execution.Name
 	prop := metaV1.DeletePropagationBackground
 	delOptions := &metaV1.DeleteOptions{
 		PropagationPolicy: &prop,
@@ -309,7 +309,7 @@ func (r *Runner) waitForApproval() (string, error) {
 	opts := metaV1.ListOptions{
 		TimeoutSeconds: &timeout,
 	}
-	watch, err := r.executionRuns.Watch(r.Namespace, opts)
+	watch, err := r.executions.Watch(r.Namespace, opts)
 	if err != nil {
 		return "", err
 	}
@@ -320,7 +320,7 @@ func (r *Runner) waitForApproval() (string, error) {
 	events := watch.ResultChan()
 
 	for {
-		var run *v1.ExecutionRun
+		var run *v1.Execution
 		event, ok := <-events
 
 		if !ok {
@@ -329,12 +329,12 @@ func (r *Runner) waitForApproval() (string, error) {
 			return r.waitForApproval()
 		}
 
-		if run, ok = event.Object.(*v1.ExecutionRun); !ok {
+		if run, ok = event.Object.(*v1.Execution); !ok {
 			logrus.Info("Problems pulling Execution Run, restarting watch.")
 			return r.waitForApproval()
 		}
 
-		if run.Name != r.ExecutionRun.Name {
+		if run.Name != r.Execution.Name {
 			continue //wait longer
 		}
 
@@ -348,12 +348,12 @@ func (r *Runner) waitForApproval() (string, error) {
 	}
 }
 
-func (r *Runner) getExecutionRun(namespace, name string) (*v1.ExecutionRun, error) {
-	return r.executionRuns.Get(namespace, name, metaV1.GetOptions{})
+func (r *Runner) getExecutionRun(namespace, name string) (*v1.Execution, error) {
+	return r.executions.Get(namespace, name, metaV1.GetOptions{})
 }
 
 func (r *Runner) getSecret(name string) (*coreV1.Secret, error) {
-	return r.secrets.Get(r.ExecutionRun.ObjectMeta.Namespace, name, metaV1.GetOptions{})
+	return r.secrets.Get(r.Execution.ObjectMeta.Namespace, name, metaV1.GetOptions{})
 }
 
 func tryUpdate(f func() error) error {

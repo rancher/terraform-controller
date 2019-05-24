@@ -26,14 +26,6 @@ type ExecutionListerExpansion interface{}
 // ExecutionNamespaceLister.
 type ExecutionNamespaceListerExpansion interface{}
 
-// ExecutionRunListerExpansion allows custom methods to be added to
-// ExecutionRunLister.
-type ExecutionRunListerExpansion interface{}
-
-// ExecutionRunNamespaceListerExpansion allows custom methods to be added to
-// ExecutionRunNamespaceLister.
-type ExecutionRunNamespaceListerExpansion interface{}
-
 // ModuleListerExpansion allows custom methods to be added to
 // ModuleLister.
 type ModuleListerExpansion interface{}
@@ -41,3 +33,11 @@ type ModuleListerExpansion interface{}
 // ModuleNamespaceListerExpansion allows custom methods to be added to
 // ModuleNamespaceLister.
 type ModuleNamespaceListerExpansion interface{}
+
+// StateListerExpansion allows custom methods to be added to
+// StateLister.
+type StateListerExpansion interface{}
+
+// StateNamespaceListerExpansion allows custom methods to be added to
+// StateNamespaceLister.
+type StateNamespaceListerExpansion interface{}

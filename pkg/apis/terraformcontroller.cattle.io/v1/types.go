@@ -58,12 +58,12 @@ type GitLocation struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type Execution struct {
+type State struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ExecutionSpec   `json:"spec"`
-	Status ExecutionStatus `json:"status"`
+	Spec   StateSpec   `json:"spec"`
+	Status StateStatus `json:"status"`
 }
 
 type Variables struct {
@@ -73,7 +73,7 @@ type Variables struct {
 	SecretNames    []string `json:"secretNames,omitempty"`
 }
 
-type ExecutionSpec struct {
+type StateSpec struct {
 	Image      string    `json:"image,omitempty"`
 	Variables  Variables `json:"variables,omitempty"`
 	ModuleName string    `json:"moduleName,omitempty"`
@@ -85,24 +85,24 @@ type ExecutionSpec struct {
 	Version         int32             `json:"version,omitempty"`
 }
 
-type ExecutionStatus struct {
-	Conditions        []genericcondition.GenericCondition `json:"conditions,omitempty"`
-	ExecutionRunName  string                              `json:"executionRunName,omitempty"`
-	ExecutionPlanName string                              `json:"executionPlanName,omitempty"`
+type StateStatus struct {
+	Conditions    []genericcondition.GenericCondition `json:"conditions,omitempty"`
+	ExecutionName string                              `json:"executionRunName,omitempty"`
+	StatePlanName string                              `json:"executionPlanName,omitempty"`
 }
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type ExecutionRun struct {
+type Execution struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ExecutionRunSpec   `json:"spec"`
-	Status ExecutionRunStatus `json:"status"`
+	Spec   ExecutionSpec   `json:"spec"`
+	Status ExecutionStatus `json:"status"`
 }
 
-type ExecutionRunSpec struct {
+type ExecutionSpec struct {
 	AutoConfirm      bool              `json:"autoConfirm,omitempty"`
 	Content          ModuleContent     `json:"content,omitempty"`
 	ContentHash      string            `json:"contentHash,omitempty"`
@@ -113,7 +113,7 @@ type ExecutionRunSpec struct {
 	SecretName string `json:"secretName,omitempty"`
 }
 
-type ExecutionRunStatus struct {
+type ExecutionStatus struct {
 	Conditions    []genericcondition.GenericCondition `json:"conditions,omitempty"`
 	JobName       string                              `json:"jobName,omitempty"`
 	PlanOutput    string                              `json:"planOutput,omitempty"`

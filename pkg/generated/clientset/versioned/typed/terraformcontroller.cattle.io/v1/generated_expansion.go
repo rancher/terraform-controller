@@ -20,6 +20,6 @@ package v1
 
 type ExecutionExpansion interface{}
 
-type ExecutionRunExpansion interface{}
-
 type ModuleExpansion interface{}
+
+type StateExpansion interface{}

@@ -50,10 +50,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&Execution{},
 		&ExecutionList{},
-		&ExecutionRun{},
-		&ExecutionRunList{},
 		&Module{},
 		&ModuleList{},
+		&State{},
+		&StateList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
