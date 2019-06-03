@@ -3,10 +3,10 @@ package terraform
 import (
 	"context"
 
-	"github.com/rancher/terraform-controller/pkg/terraform/state"
-
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/terraform-controller/pkg/terraform/execution"
 	"github.com/rancher/terraform-controller/pkg/terraform/module"
+	"github.com/rancher/terraform-controller/pkg/terraform/state"
 	batchv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/batch/v1"
 	corev1 "github.com/rancher/wrangler-api/pkg/generated/controllers/core/v1"
 	rbacv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/rbac/v1"
@@ -24,7 +24,6 @@ func Register(
 	serviceAccounts corev1.ServiceAccountController,
 	jobs batchv1.JobController,
 ) {
-
 	stateHandler := state.NewHandler(
 		ctx,
 		modules,
@@ -36,10 +35,14 @@ func Register(
 		configMaps,
 		serviceAccounts,
 		jobs)
-	states.OnChange(ctx, "executions-handler", stateHandler.OnChange)
-	states.OnRemove(ctx, "executions-handler", stateHandler.OnRemove)
+	states.OnChange(ctx, "states-handler", stateHandler.OnChange)
+	states.OnRemove(ctx, "states-handler", stateHandler.OnRemove)
 
 	moduleHandler := module.NewHandler(ctx, modules, secrets)
 	modules.OnChange(ctx, "modules-handler", moduleHandler.OnChange)
 	modules.OnRemove(ctx, "modules-handler", moduleHandler.OnRemove)
+
+	executionHandler := execution.NewHandler(ctx, executions, modules)
+	executions.OnChange(ctx, "execution-handler", executionHandler.OnChange)
+	executions.OnRemove(ctx, "execution-handler", executionHandler.OnRemove)
 }

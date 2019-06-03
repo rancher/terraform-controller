@@ -43,23 +43,6 @@ func NewModule(namespace, name string, obj Module) *Module {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ExecutionList is a list of Execution resources
-type ExecutionList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []Execution `json:"items"`
-}
-
-func NewExecution(namespace, name string, obj Execution) *Execution {
-	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("Execution").ToAPIVersionAndKind()
-	obj.Name = name
-	obj.Namespace = namespace
-	return &obj
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // StateList is a list of State resources
 type StateList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -70,6 +53,23 @@ type StateList struct {
 
 func NewState(namespace, name string, obj State) *State {
 	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("State").ToAPIVersionAndKind()
+	obj.Name = name
+	obj.Namespace = namespace
+	return &obj
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ExecutionList is a list of Execution resources
+type ExecutionList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Execution `json:"items"`
+}
+
+func NewExecution(namespace, name string, obj Execution) *Execution {
+	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("Execution").ToAPIVersionAndKind()
 	obj.Name = name
 	obj.Namespace = namespace
 	return &obj

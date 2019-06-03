@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/sirupsen/logrus"
 
@@ -20,39 +21,35 @@ func (h *handler) gatherInput(obj *v1.State) (*Input, bool, error) {
 	mod, err := h.modules.Get(ns, spec.ModuleName, metaV1.GetOptions{})
 
 	if err != nil {
-		logrus.Debug("Pulling Module Failed.")
 		if k8sError.IsNotFound(err) {
-			return nil, false, nil
+			return nil, false, fmt.Errorf("no module with name %s", spec.ModuleName)
 		}
-		return nil, false, err
+		return nil, false, errors.New("pulling module failed")
 	}
 
 	if mod.Status.ContentHash == "" {
-		return nil, false, nil
+		return nil, false, errors.New("module content hash is empty")
 	}
 
 	secrets, ok, err := h.getSecrets(ns, spec)
 	if !ok || err != nil {
-		logrus.Debug("Pulling Secrets Failed.")
-		return nil, false, err
+		return nil, false, errors.New("pulling secrets failed")
 	}
 
 	configs, ok, err := h.getConfigs(ns, spec)
 	if !ok || err != nil {
-		logrus.Debug("Pulling Executions Failed.")
-		return nil, false, err
+		return nil, false, errors.New("pulling config maps failed")
 	}
 
 	executions, ok, err := h.getExecutions(ns, spec)
 	if !ok || err != nil {
-		logrus.Debug("Pulling Executions Failed.")
-		return nil, false, err
+		logrus.Debug()
+		return nil, false, errors.New("pulling executions failed")
 	}
 
 	envVars, ok, err := h.getEnvVars(ns, spec)
 	if !ok || err != nil {
-		logrus.Debug("Pulling Environment Variables Failed.")
-		return nil, false, err
+		return nil, false, errors.New("pulling environment variables failed")
 	}
 
 	return &Input{

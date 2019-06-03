@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -28,7 +29,9 @@ func terraform(ctx context.Context, env []string, args ...string) ([]string, err
 	var output []string
 	s := bufio.NewScanner(&out)
 	for s.Scan() {
-		output = append(output, s.Text())
+		line := s.Text()
+		fmt.Println(line)
+		output = append(output, line)
 	}
 
 	return output, s.Err()

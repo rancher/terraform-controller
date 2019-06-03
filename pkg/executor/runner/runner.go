@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,9 +12,10 @@ import (
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/executor/terraform"
 	"github.com/rancher/terraform-controller/pkg/executor/writer"
-	terraformcontroller "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
+	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/git"
+	"github.com/rancher/terraform-controller/pkg/gz"
 	batchcontroller "github.com/rancher/wrangler-api/pkg/generated/controllers/batch"
 	batchv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/batch/v1"
 	corecontroller "github.com/rancher/wrangler-api/pkg/generated/controllers/core"
@@ -201,7 +203,7 @@ func (r *Runner) Populate() error {
 	}
 	r.Namespace = ns
 
-	run, err := r.getExecutionRun(ns, name)
+	run, err := r.getExecution(ns, name)
 	if err != nil {
 		return err
 	}
@@ -233,7 +235,7 @@ func (r *Runner) Populate() error {
 
 func (r *Runner) SetExecutionRunStatus(s string) error {
 	return tryUpdate(func() error {
-		run, err := r.getExecutionRun(r.Namespace, r.Execution.Name)
+		run, err := r.getExecution(r.Namespace, r.Execution.Name)
 		if err != nil {
 			return err
 		}
@@ -256,11 +258,38 @@ func (r *Runner) SetExecutionRunStatus(s string) error {
 	})
 }
 
+func (r *Runner) SetExecutionLogs(s string) error {
+	return tryUpdate(func() error {
+		exec, err := r.getExecution(r.Namespace, r.Execution.Name)
+		if err != nil {
+			return err
+		}
+
+		compressedLogs, err := gz.Compress([]byte(s))
+		if err != nil {
+			return err
+		}
+
+		copy := exec.DeepCopy()
+		copy.Status.JobLogs = base64.StdEncoding.EncodeToString(compressedLogs)
+		if err != nil {
+			return err
+		}
+
+		exec, err = r.executions.Update(copy)
+		if err != nil {
+			return err
+		}
+		r.Execution = exec
+		return nil
+	})
+}
+
 func (r *Runner) WriteConfigFile() error {
 	config := Config{
 		Terraform: Terraform{
 			Backend: map[string]*Backend{
-				"kubernetes": &Backend{
+				"kubernetes": {
 					Key:            r.Execution.Spec.ExecutionName,
 					Namespace:      r.Execution.Namespace,
 					ServiceAccount: "true",
@@ -274,7 +303,6 @@ func (r *Runner) WriteConfigFile() error {
 		return err
 	}
 
-	//err = writer.Write(jsonConfig, "/root/module/config.tf.json")
 	err = writer.Write(jsonConfig, "/root/module/config.tf.json")
 	if err != nil {
 		return err
@@ -348,7 +376,7 @@ func (r *Runner) waitForApproval() (string, error) {
 	}
 }
 
-func (r *Runner) getExecutionRun(namespace, name string) (*v1.Execution, error) {
+func (r *Runner) getExecution(namespace, name string) (*v1.Execution, error) {
 	return r.executions.Get(namespace, name, metaV1.GetOptions{})
 }
 
