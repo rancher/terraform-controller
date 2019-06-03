@@ -6,6 +6,7 @@ spec:
   moduleName: my-module
   destroyOnDelete: true
   autoConfirm: true
+  image: rancher/terraform-controller-executor:dev
   variables:
     secretNames:
       - mysecret

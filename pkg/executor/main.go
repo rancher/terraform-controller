@@ -86,7 +86,11 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		fmt.Print(out)
+
+		err = runner.SetExecutionLogs(out)
+		if err != nil {
+			return err
+		}
 
 		err = runner.SetExecutionRunStatus("applied")
 		if err != nil {
@@ -102,7 +106,11 @@ func run() error {
 		if err != nil {
 			return err
 		}
-		fmt.Print(out)
+
+		err = runner.SetExecutionLogs(out)
+		if err != nil {
+			return err
+		}
 
 		err = runner.SetExecutionRunStatus("applied")
 		if err != nil {

@@ -17,7 +17,7 @@ func (e InvalidArgs) Error() string {
 func ModuleCommand() cli.Command {
 	return cli.Command{
 		Name:    "modules",
-		Aliases: []string{"module"},
+		Aliases: []string{"module", "m"},
 		Usage:   "Manage modules",
 		Action:  moduleList,
 		Subcommands: []cli.Command{

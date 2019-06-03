@@ -18,17 +18,18 @@ func main() {
 	app.Name = "tffy"
 	app.Version = VERSION
 	app.Action = cli.ShowCommandHelp
+	app.HideHelp = false
 	app.CommandNotFound = func(c *cli.Context, command string) {
 		fmt.Fprintf(c.App.Writer, "Thar be no %q here.\n", command)
 	}
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:   "kubeconfig",
+			Name:   "kubeconfig, k",
 			EnvVar: "KUBECONFIG",
 			Value:  "${HOME}/.kube/config",
 		},
 		cli.StringFlag{
-			Name:   "namespace,n",
+			Name:   "namespace, n",
 			EnvVar: "NAMESPACE",
 			Value:  "default",
 		},
@@ -47,6 +48,10 @@ func main() {
 }
 
 func run(c *cli.Context) error {
+	err := cli.ShowAppHelp(c)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

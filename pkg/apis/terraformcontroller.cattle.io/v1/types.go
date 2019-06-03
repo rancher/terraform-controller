@@ -77,7 +77,7 @@ type StateSpec struct {
 	Image      string    `json:"image,omitempty"`
 	Variables  Variables `json:"variables,omitempty"`
 	ModuleName string    `json:"moduleName,omitempty"`
-	// Data is dataName mapped to another executionRun name
+	// Data is dataName mapped to another execution name
 	// so terraform variable name that should be an output from the run
 	Data            map[string]string `json:"data,omitempty"`
 	AutoConfirm     bool              `json:"autoConfirm,omitempty"`
@@ -87,7 +87,7 @@ type StateSpec struct {
 
 type StateStatus struct {
 	Conditions    []genericcondition.GenericCondition `json:"conditions,omitempty"`
-	ExecutionName string                              `json:"executionRunName,omitempty"`
+	ExecutionName string                              `json:"executionName,omitempty"`
 	StatePlanName string                              `json:"executionPlanName,omitempty"`
 }
 
@@ -116,6 +116,7 @@ type ExecutionSpec struct {
 type ExecutionStatus struct {
 	Conditions    []genericcondition.GenericCondition `json:"conditions,omitempty"`
 	JobName       string                              `json:"jobName,omitempty"`
+	JobLogs       string                              `json:"jobLogs,omitempty"`
 	PlanOutput    string                              `json:"planOutput,omitempty"`
 	PlanConfirmed bool                                `json:"planConfirmed,omitempty"`
 	ApplyOutput   string                              `json:"applyOutput,omitempty"`

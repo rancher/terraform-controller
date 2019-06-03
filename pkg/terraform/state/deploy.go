@@ -32,50 +32,49 @@ type Input struct {
 }
 
 // deployCreate creates all resources for the job to run terraform create and returns the run name
-func (h *handler) deployCreate(execution *v1.State, input *Input, action string) (string, error) {
-	logrus.Info("deploy create")
+func (h *handler) deployCreate(state *v1.State, input *Input, action string) (string, error) {
+	logrus.Debug("Creating Deploy")
 	combinedVars := combineVars(input)
 	// Always set the key for the k8s backend
-	combinedVars["key"] = execution.Name
+	combinedVars["key"] = state.Name
 
 	jsonVars, err := json.Marshal(combinedVars)
-
-	logrus.Info(string(jsonVars))
 
 	if err != nil {
 		return "", err
 	}
 
-	name := createExecRunAndSecretName(execution, combinedVars, input.Module.Status.ContentHash)
+	name := createExecRunAndSecretName(state, combinedVars, input.Module.Status.ContentHash)
 
-	match, err := h.runsMatch(execution, input, jsonVars)
+	match, err := h.runsMatch(state, input, jsonVars)
 	if err != nil {
 		return "", err
 	}
 
 	if match {
-		return execution.Status.ExecutionName, nil
+		return state.Status.ExecutionName, nil
 	}
 
-	namespace := execution.Namespace
+	namespace := state.Namespace
 
 	or := []metaV1.OwnerReference{
-		metaV1.OwnerReference{
-			APIVersion: "terraform-controller.cattle.io/v1",
-			Kind:       "Execution",
-			Name:       execution.Name,
-			UID:        execution.UID,
+		{
+			APIVersion: "terraformcontroller.cattle.io/v1",
+			Kind:       "Module",
+			Name:       state.Name,
+			UID:        state.UID,
 		},
 	}
 
 	logrus.Debug("Create - Creating executionRun")
-	_, err = h.createExecution(or, execution, name, input)
+	//skip owner reference for executions so logs stay around after deletion
+	_, err = h.createExecution([]metaV1.OwnerReference{}, state, name, input)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Create - Creating secret")
-	_, err = h.createSecretForVariablesFile(or, name, execution, jsonVars)
+	_, err = h.createSecretForVariablesFile(or, name, state, jsonVars)
 	if err != nil {
 		return "", err
 	}
@@ -104,37 +103,36 @@ func (h *handler) deployCreate(execution *v1.State, input *Input, action string)
 		return "", err
 	}
 
-	logrus.Infof("Deployed create job for execution %v", execution.Name)
+	logrus.Infof("Deployed create job for state %v", state.Name)
 
 	return name, nil
 }
 
 // deployCreate creates all resources for the job to run terraform destroy
-func (h *handler) deployDestroy(execution *v1.State, input *Input, action string) (string, error) {
+func (h *handler) deployDestroy(state *v1.State, input *Input, action string) (string, error) {
 	combinedVars := combineVars(input)
 	// Always set the key for the k8s backend
-	combinedVars["key"] = execution.Name
+	combinedVars["key"] = state.Name
 
 	jsonVars, err := json.Marshal(combinedVars)
 	if err != nil {
 		return "", err
 	}
 
-	name := createExecRunAndSecretName(execution, combinedVars, input.Module.Status.ContentHash)
-	name = name + "-destroy"
+	name := createExecRunAndSecretName(state, combinedVars, input.Module.Status.ContentHash)
 
-	namespace := execution.Namespace
+	namespace := state.Namespace
 
 	or := []metaV1.OwnerReference{}
 
 	logrus.Debug("Destroy - Creating executionRun")
-	_, err = h.createExecution(or, execution, name, input)
+	_, err = h.createExecution(or, state, name, input)
 	if err != nil {
 		return "", err
 	}
 
 	logrus.Debug("Destroy - Creating secret")
-	secret, err := h.createSecretForVariablesFile(or, name, execution, jsonVars)
+	secret, err := h.createSecretForVariablesFile(or, name, state, jsonVars)
 	if err != nil {
 		return "", err
 	}
@@ -163,7 +161,7 @@ func (h *handler) deployDestroy(execution *v1.State, input *Input, action string
 		return "", err
 	}
 
-	logrus.Infof("Deployed destroy job for execution %v", execution.Name)
+	logrus.Infof("Deployed destroy job for state %v", state.Name)
 
 	return name, nil
 }
@@ -223,34 +221,35 @@ func (h *handler) varsChanged(vars []byte, run *v1.Execution) (bool, error) {
 
 func (h *handler) createExecution(
 	or []metaV1.OwnerReference,
-	execution *v1.State,
+	state *v1.State,
 	name string,
 	input *Input,
 ) (*v1.Execution, error) {
-	execRun := &v1.Execution{
+	execution := &v1.Execution{
 		ObjectMeta: metaV1.ObjectMeta{
 			Name:            name,
-			Namespace:       execution.Namespace,
+			Namespace:       state.Namespace,
 			OwnerReferences: or,
 			Annotations:     map[string]string{"approved": ""},
+			Labels:          map[string]string{"state": state.Name},
 		},
 		Spec: v1.ExecutionSpec{
-			ExecutionName:    execution.Name,
-			AutoConfirm:      execution.Spec.AutoConfirm,
+			ExecutionName:    state.Name,
+			AutoConfirm:      state.Spec.AutoConfirm,
 			SecretName:       "s-" + name,
 			Content:          input.Module.Status.Content,
 			ContentHash:      input.Module.Status.ContentHash,
-			ExecutionVersion: execution.Spec.Version,
+			ExecutionVersion: state.Spec.Version,
 		},
 	}
 
-	run, err := h.executions.Create(execRun)
+	run, err := h.executions.Create(execution)
 	if err != nil {
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
 
-		return h.executions.Get(execution.Namespace, name, metaV1.GetOptions{})
+		return h.executions.Get(state.Namespace, name, metaV1.GetOptions{})
 
 	}
 	return run, nil
@@ -301,7 +300,7 @@ func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, a
 				Spec: coreV1.PodSpec{
 					ServiceAccountName: sa,
 					Containers: []coreV1.Container{
-						coreV1.Container{
+						{
 							Name:  "agent",
 							Image: input.Image,
 							Env:   input.EnvVars,
@@ -351,7 +350,7 @@ func (h *handler) createClusterRoleBinding(or []metaV1.OwnerReference, name, rol
 	clusterRoleBinding := rbacV1.ClusterRoleBinding{
 		ObjectMeta: meta,
 		Subjects: []rbacV1.Subject{
-			rbacV1.Subject{
+			{
 				Kind:      "ServiceAccount",
 				Name:      sa,
 				Namespace: namespace,
@@ -377,7 +376,7 @@ func (h *handler) createClusterRoleBinding(or []metaV1.OwnerReference, name, rol
 // updateOwnerReference ties the passed in objs to a job
 func (h *handler) updateOwnerReference(job *batchV1.Job, objs []interface{}, namespace string) error {
 	or := []metaV1.OwnerReference{
-		metaV1.OwnerReference{
+		{
 			APIVersion: "batch/v1",
 			Kind:       "Job",
 			Name:       job.Name,
@@ -391,12 +390,12 @@ func (h *handler) updateOwnerReference(job *batchV1.Job, objs []interface{}, nam
 		switch v := obj.(type) {
 		case *v1.Execution:
 			err = tryUpdate(func() error {
-				run, err := h.executions.Get(namespace, v.Name, metaV1.GetOptions{})
+				execution, err := h.executions.Get(namespace, v.Name, metaV1.GetOptions{})
 				if err != nil {
 					return errors.WithMessage(err, "failed executionRun get")
 				}
-				run.OwnerReferences = or
-				_, err = h.executions.Update(run)
+				execution.OwnerReferences = or
+				_, err = h.executions.Update(execution)
 				if err != nil {
 					return errors.WithMessage(err, "failed executionRun update")
 				}
@@ -490,19 +489,19 @@ func combineVars(input *Input) map[string]string {
 
 func createEnvForJob(input *Input, action, runName, namespace string) {
 	envVars := []coreV1.EnvVar{
-		coreV1.EnvVar{
+		{
 			Name:  "TF_IN_AUTOMATION",
 			Value: "true",
 		},
-		coreV1.EnvVar{
+		{
 			Name:  "EXECUTOR_ACTION",
 			Value: action,
 		},
-		coreV1.EnvVar{
+		{
 			Name:  "EXECUTOR_RUN_NAME",
 			Value: runName,
 		},
-		coreV1.EnvVar{
+		{
 			Name:  "EXECUTOR_NAMESPACE",
 			Value: namespace,
 		},
@@ -511,11 +510,11 @@ func createEnvForJob(input *Input, action, runName, namespace string) {
 	input.EnvVars = append(input.EnvVars, envVars...)
 }
 
-func createExecRunAndSecretName(execution *v1.State, vars map[string]string, h string) string {
+func createExecRunAndSecretName(state *v1.State, vars map[string]string, h string) string {
 	varHash := digest.SHA256Map(vars)
 
 	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, execution.Spec.Version)
+	err := binary.Write(buf, binary.LittleEndian, state.Spec.Version)
 	if err != nil {
 		fmt.Println("binary.Write failed:", err)
 	}
@@ -533,7 +532,7 @@ func createExecRunAndSecretName(execution *v1.State, vars map[string]string, h s
 
 	encoding := hex.EncodeToString(hash.Sum(nil))[:10]
 
-	return execution.ObjectMeta.Name + "-" + encoding
+	return state.ObjectMeta.Name + "-" + encoding
 }
 
 // tryUpdate runs the input func and if the error returned is a conflict error
