@@ -108,7 +108,7 @@ func (h *handler) getAuth(ns string, spec v1.ModuleSpec) (git.Auth, error) {
 
 func needsUpdate(m *v1.Module) bool {
 	return interval.NeedsUpdate(m.Status.CheckTime.Time, time.Duration(m.Spec.Git.IntervalSeconds)*time.Second) ||
-		!v1.ModuleConditionGitUpdated.IsTrue(m) ||
+		v1.ModuleConditionGitUpdated.IsFalse(m) ||
 		m.Status.GitChecked == nil ||
 		m.Status.GitChecked.URL != m.Spec.Git.URL ||
 		m.Status.GitChecked.Branch != m.Spec.Git.Branch

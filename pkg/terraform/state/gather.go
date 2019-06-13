@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/sirupsen/logrus"
-
 	coreV1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -119,15 +118,11 @@ func (h *handler) getExecutions(ns string, spec v1.StateSpec) (map[string]string
 func (h *handler) getEnvVars(ns string, spec v1.StateSpec) ([]coreV1.EnvVar, bool, error) {
 	result := []coreV1.EnvVar{}
 
-	logrus.Debugf("Pulling Vars from Secrets: %d", len(spec.Variables.EnvSecretNames))
 	for _, name := range spec.Variables.EnvSecretNames {
-		logrus.Debugf("Secret: %s", name)
 		secret, err := h.secrets.Get(ns, name, metaV1.GetOptions{})
 		if k8sError.IsNotFound(err) {
-			logrus.Debugf("Not Found: %s", name)
 			return result, false, nil
 		} else if err != nil {
-			logrus.Debugf("Error: %s", name)
 			return result, false, err
 		}
 
@@ -140,15 +135,11 @@ func (h *handler) getEnvVars(ns string, spec v1.StateSpec) ([]coreV1.EnvVar, boo
 		}
 	}
 
-	logrus.Debugf("Pulling Env Vars from Config Maps: %d", len(spec.Variables.EnvConfigName))
 	for _, name := range spec.Variables.EnvConfigName {
-		logrus.Debugf("Env Var: %s", name)
 		config, err := h.configMaps.Get(ns, name, metaV1.GetOptions{})
 		if k8sError.IsNotFound(err) {
-			logrus.Debugf("Not Found: %s", name)
 			return result, false, nil
 		} else if err != nil {
-			logrus.Debugf("Error: %s", name)
 			return result, false, err
 		}
 
