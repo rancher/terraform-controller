@@ -9,10 +9,10 @@ import (
 var (
 	ModuleConditionGitUpdated = condition.Cond("GitUpdated")
 
-	ExecutionConditionDestroyJobDeployed = condition.Cond("DestroyJobDeployed")
-	ExecutionConditionJobDeployed        = condition.Cond("JobDeployed")
-	ExecutionConditionMissingInfo        = condition.Cond("MissingInfo")
-	ExecutionConditionWatchRunning       = condition.Cond("WatchRunning")
+	StateConditionJobDeployed      = condition.Cond("JobDeployed")
+	ExecutionConditionMissingInfo  = condition.Cond("MissingInfo")
+	ExecutionConditionWatchRunning = condition.Cond("WatchRunning")
+	StateConditionDestroyed        = condition.Cond("Destroyed")
 
 	ExecutionRunConditionPlanned = condition.Cond("Planned")
 	ExecutionRunConditionApplied = condition.Cond("Applied")
@@ -87,6 +87,7 @@ type StateSpec struct {
 
 type StateStatus struct {
 	Conditions    []genericcondition.GenericCondition `json:"conditions,omitempty"`
+	LastRunHash   string                              `json:"lastRunHash,omitempty"`
 	ExecutionName string                              `json:"executionName,omitempty"`
 	StatePlanName string                              `json:"executionPlanName,omitempty"`
 }
@@ -106,6 +107,7 @@ type ExecutionSpec struct {
 	AutoConfirm      bool              `json:"autoConfirm,omitempty"`
 	Content          ModuleContent     `json:"content,omitempty"`
 	ContentHash      string            `json:"contentHash,omitempty"`
+	RunHash          string            `json:"runHash,omitempty"`
 	Data             map[string]string `json:"data,omitempty"`
 	ExecutionName    string            `json:"executionName,omitempty"`
 	ExecutionVersion int32             `json:"executionVersion,omitempty"`
