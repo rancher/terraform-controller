@@ -3,6 +3,7 @@ module github.com/rancher/terraform-controller
 go 1.12
 
 require (
+	github.com/docker/go-units v0.4.0
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
