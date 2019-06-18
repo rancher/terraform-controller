@@ -3,8 +3,9 @@ package cmds
 import (
 	"encoding/base64"
 	"fmt"
+	"time"
 
-	"github.com/rancher/terraform-controller/pkg/age"
+	"github.com/docker/go-units"
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/gz"
 	"github.com/sirupsen/logrus"
@@ -29,11 +30,18 @@ func ExecutionCommand() cli.Command {
 				Action:    executionList,
 			},
 			{
-				Name:      "delete",
-				Aliases:   []string{"del"},
-				Usage:     "Delete executions for a specific state.",
-				ArgsUsage: "[EXECUTION NAME]",
-				Action:    executionDelete,
+				Name:      "prune",
+				Aliases:   []string{"pr"},
+				Usage:     "Takes a state and will delete all executions aged > <days> , pass --days to change how many days to leave",
+				ArgsUsage: "[STATE NAME]",
+				Action:    executionPrune,
+				Flags: []cli.Flag{
+					cli.IntFlag{
+						Name:  "days",
+						Usage: "How many days of executions you want to keep around, --days 2 will leave the last 48hrs of executions",
+						Value: 7,
+					},
+				},
 			},
 			{
 				Name:      "logs",
@@ -41,6 +49,13 @@ func ExecutionCommand() cli.Command {
 				Usage:     "List executions",
 				ArgsUsage: "[EXECUTION NAME]",
 				Action:    logs,
+			},
+			{
+				Name:      "delete",
+				Aliases:   []string{"del"},
+				Usage:     "Delete an execution",
+				ArgsUsage: "[EXECUTION NAME]",
+				Action:    delete,
 			},
 			{
 				Name:      "approve",
@@ -90,9 +105,18 @@ func logs(c *cli.Context) error {
 	return nil
 }
 
-func executionDelete(c *cli.Context) error {
+func executionPrune(c *cli.Context) error {
 	namespace := c.GlobalString("namespace")
 	kubeConfig := c.GlobalString("kubeconfig")
+
+	days := c.Int("days")
+
+	if days > 0 {
+		days = days * -1
+	}
+
+	now := time.Now()
+	from := now.AddDate(0, 0, days)
 
 	controllers, err := getControllers(kubeConfig, namespace)
 	if err != nil {
@@ -114,13 +138,46 @@ func executionDelete(c *cli.Context) error {
 	}
 
 	for _, exec := range execs.Items {
-		err := controllers.executions.Delete(namespace, exec.Name, &metav1.DeleteOptions{})
+		if exec.CreationTimestamp.After(from) {
+			continue
+		}
 		logrus.Info("deleting " + exec.Name)
+		err := controllers.executions.Delete(namespace, exec.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func delete(c *cli.Context) error {
+	namespace := c.GlobalString("namespace")
+	kubeConfig := c.GlobalString("kubeconfig")
+
+	if len(c.Args()) != 1 {
+		return InvalidArgs{}
+	}
+
+	name := c.Args().First()
+
+	controllers, err := getControllers(kubeConfig, namespace)
+	if err != nil {
+		return err
+	}
+
+	_, err = controllers.executions.Get(namespace, name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = controllers.executions.Delete(namespace, name, &metav1.DeleteOptions{})
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Deleted %s\n", name)
 	return nil
 }
 
@@ -209,11 +266,12 @@ func runsListToTableStrings(executions *v1.ExecutionList) [][]string {
 			approved = "False"
 		}
 
+		age := units.HumanDuration(time.Now().UTC().Sub(execution.ObjectMeta.CreationTimestamp.Time))
 		values = append(values, []string{
 			execution.Name,
 			execution.Labels["state"],
 			approved,
-			age.Age(execution.ObjectMeta.CreationTimestamp.Time),
+			age,
 		})
 	}
 
