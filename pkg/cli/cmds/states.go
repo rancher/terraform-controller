@@ -182,9 +182,9 @@ func stateUnlock(c *cli.Context) error {
 
 	for _, secret := range secrets.Items {
 		if secret.Data["lockInfo"] != nil {
-			copy := secret.DeepCopy()
-			copy.Data["lockInfo"] = nil
-			_, err := controllers.secrets.Update(copy)
+			copyObj := secret.DeepCopy()
+			copyObj.Data["lockInfo"] = nil
+			_, err := controllers.secrets.Update(copyObj)
 			if err != nil {
 				return err
 			}
@@ -236,14 +236,16 @@ func runState(c *cli.Context) error {
 
 	state, err := getState(namespace, kubeConfig, name)
 	if err != nil {
+		logrus.Debug(err)
 		return err
 	}
 
-	// Not really an ideal or safe operation.
-	// Need to create something on the execution type to lock
-	state.Spec.Version += 1
+	copyObj := state.DeepCopy()
+	copyObj.Spec.Version += 1
+	copyObj.Status.LastRunHash = ""
+	v1.StateConditionJobDeployed.False(copyObj)
 
-	_, err = saveState(kubeConfig, namespace, state)
+	_, err = saveState(kubeConfig, namespace, copyObj)
 	return err
 }
 
@@ -268,19 +270,13 @@ func deleteState(c *cli.Context) error {
 	}
 
 	if state.DeletionTimestamp != nil {
-		jobName := "job-" + state.Status.ExecutionName
-		job, err := controllers.jobs.Get(namespace, jobName, metav1.GetOptions{})
-		if err == nil && job.Status.Failed > 0 {
-			err := controllers.jobs.Delete(namespace, jobName, &metav1.DeleteOptions{})
-			if err != nil {
-				return err
-			}
-			//trying to delete but the job failed, give the change handler a chance to delete again.
-			state.Status.ExecutionName = ""
-			_, err = controllers.states.Update(state)
-			if err != nil {
-				return err
-			}
+		state.Status.ExecutionName = ""
+		state.Spec.Version += 1
+		state.Status.LastRunHash = ""
+		v1.StateConditionJobDeployed.False(state)
+		_, err = controllers.states.Update(state)
+		if err != nil {
+			return err
 		}
 	}
 

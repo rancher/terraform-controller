@@ -39,10 +39,41 @@ func ModuleCommand() cli.Command {
 				ArgsUsage: "[NAME]",
 				Action:    deleteModule,
 			},
+			{
+				Name:      "update",
+				Usage:     "Force the handler to update the git content.",
+				ArgsUsage: "[NAME]",
+				Action:    updateModule,
+			},
 		},
 	}
 }
 
+func updateModule(c *cli.Context) error {
+	kubeConfig := c.GlobalString("kubeconfig")
+	namespace := c.GlobalString("namespace")
+
+	controllers, err := getControllers(kubeConfig, namespace)
+	if err != nil {
+		return err
+	}
+
+	args := c.Args()
+	if len(args) != 1 {
+		return InvalidArgs{}
+	}
+
+	moduleName := c.Args()[0]
+
+	module, err := controllers.modules.Get(namespace, moduleName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	v1.ModuleConditionGitUpdated.False(module)
+	_, err = controllers.modules.Update(module)
+	return err
+}
 func moduleList(c *cli.Context) error {
 	kubeConfig := c.GlobalString("kubeconfig")
 	namespace := c.GlobalString("namespace")
