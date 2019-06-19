@@ -73,7 +73,7 @@ func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, er
 	}
 
 	logrus.Debug("Create - Creating job")
-	job, err := h.createJob(or, input, exec.Name, runHash, ActionCreate, sa.Name, namespace)
+	job, err := h.createJob(or, input, exec.Name, runHash, ActionCreate, sa.Name, namespace, state.Spec.NodeSelector)
 	if err != nil {
 		return exec, err
 	}
@@ -123,7 +123,7 @@ func (h *handler) deployDestroy(state *v1.State, input *Input) (*v1.Execution, e
 	}
 
 	logrus.Debug("Destroy - Creating job")
-	job, err := h.createJob(or, input, exec.Name, runHash, ActionDestroy, sa.Name, state.Namespace)
+	job, err := h.createJob(or, input, exec.Name, runHash, ActionDestroy, sa.Name, state.Namespace, state.Spec.NodeSelector)
 	if err != nil {
 		return exec, err
 	}
@@ -196,7 +196,7 @@ func (h *handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name 
 	return s, nil
 }
 
-func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, runHash, action, sa, namespace string) (*batchV1.Job, error) {
+func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, runHash, action, sa, namespace string, nodeSelector map[string]string) (*batchV1.Job, error) {
 	createEnvForJob(input, action, runName, namespace)
 
 	meta := metaV1.ObjectMeta{
@@ -222,6 +222,7 @@ func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, r
 							Env:   input.EnvVars,
 						},
 					},
+					NodeSelector:  nodeSelector,
 					RestartPolicy: "OnFailure",
 				},
 			},
