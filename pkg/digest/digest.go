@@ -3,8 +3,9 @@ package digest
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/sirupsen/logrus"
 	"sort"
+
+	"github.com/sirupsen/logrus"
 )
 
 func SHA256Map(data map[string]string) string {
