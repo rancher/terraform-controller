@@ -42,12 +42,15 @@ github.com/pmezard/go-difflib/difflib
 github.com/rancher/wrangler/pkg/resolvehome
 github.com/rancher/wrangler/pkg/signals
 github.com/rancher/wrangler/pkg/start
+github.com/rancher/wrangler/pkg/crd
 github.com/rancher/wrangler/pkg/condition
 github.com/rancher/wrangler/pkg/genericcondition
 github.com/rancher/wrangler/pkg/controller-gen
 github.com/rancher/wrangler/pkg/controller-gen/args
 github.com/rancher/wrangler/pkg/cleanup
 github.com/rancher/wrangler/pkg/generic
+github.com/rancher/wrangler/pkg/kv
+github.com/rancher/wrangler/pkg/name
 github.com/rancher/wrangler/pkg/controller-gen/generators
 # github.com/rancher/wrangler-api v0.1.1
 github.com/rancher/wrangler-api/pkg/generated/controllers/batch
@@ -114,8 +117,8 @@ gopkg.in/inf.v0
 gopkg.in/yaml.v2
 # k8s.io/api v0.0.0-20190409021203-6e4e0e4f393b
 k8s.io/api/core/v1
-k8s.io/api/batch/v1
 k8s.io/api/rbac/v1
+k8s.io/api/batch/v1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/apps/v1
 k8s.io/api/apps/v1beta1
@@ -149,11 +152,18 @@ k8s.io/api/authentication/v1
 k8s.io/api/authentication/v1beta1
 k8s.io/api/authorization/v1
 k8s.io/api/authorization/v1beta1
+# k8s.io/apiextensions-apiserver v0.0.0-20190409022649-727a075fdec8
+k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1
+k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset
+k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
+k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1
+k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme
 # k8s.io/apimachinery v0.0.0-20190404173353-6a84e37a896d
+k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/apis/meta/v1
+k8s.io/apimachinery/pkg/util/wait
 k8s.io/apimachinery/pkg/runtime
 k8s.io/apimachinery/pkg/runtime/schema
-k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/runtime/serializer
 k8s.io/apimachinery/pkg/util/runtime
 k8s.io/apimachinery/pkg/watch
@@ -163,17 +173,17 @@ k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/util/errors
 k8s.io/apimachinery/pkg/util/validation
 k8s.io/apimachinery/pkg/api/resource
+k8s.io/apimachinery/pkg/util/intstr
+k8s.io/apimachinery/pkg/util/validation/field
 k8s.io/apimachinery/pkg/conversion
 k8s.io/apimachinery/pkg/fields
 k8s.io/apimachinery/pkg/selection
-k8s.io/apimachinery/pkg/util/intstr
+k8s.io/apimachinery/pkg/runtime/serializer/streaming
+k8s.io/apimachinery/pkg/util/net
+k8s.io/apimachinery/pkg/util/sets
 k8s.io/apimachinery/pkg/conversion/queryparams
 k8s.io/apimachinery/pkg/util/json
 k8s.io/apimachinery/pkg/util/naming
-k8s.io/apimachinery/pkg/util/sets
-k8s.io/apimachinery/pkg/util/validation/field
-k8s.io/apimachinery/pkg/runtime/serializer/streaming
-k8s.io/apimachinery/pkg/util/net
 k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/util/clock
 k8s.io/apimachinery/pkg/runtime/serializer/json
@@ -182,7 +192,6 @@ k8s.io/apimachinery/pkg/runtime/serializer/recognizer
 k8s.io/apimachinery/pkg/runtime/serializer/versioning
 k8s.io/apimachinery/pkg/api/meta
 k8s.io/apimachinery/pkg/util/strategicpatch
-k8s.io/apimachinery/pkg/util/wait
 k8s.io/apimachinery/pkg/util/cache
 k8s.io/apimachinery/pkg/util/diff
 k8s.io/apimachinery/third_party/forked/golang/reflect
@@ -195,8 +204,8 @@ k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/pkg/apis/meta/internalversion
 # k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
 k8s.io/client-go/tools/clientcmd
-k8s.io/client-go/rest
 k8s.io/client-go/kubernetes
+k8s.io/client-go/rest
 k8s.io/client-go/discovery
 k8s.io/client-go/util/flowcontrol
 k8s.io/client-go/discovery/fake
@@ -210,18 +219,6 @@ k8s.io/client-go/tools/auth
 k8s.io/client-go/tools/clientcmd/api
 k8s.io/client-go/tools/clientcmd/api/latest
 k8s.io/client-go/util/homedir
-k8s.io/client-go/informers/batch/v1
-k8s.io/client-go/kubernetes/typed/batch/v1
-k8s.io/client-go/listers/batch/v1
-k8s.io/client-go/informers/core/v1
-k8s.io/client-go/kubernetes/typed/core/v1
-k8s.io/client-go/listers/core/v1
-k8s.io/client-go/pkg/version
-k8s.io/client-go/plugin/pkg/client/auth/exec
-k8s.io/client-go/rest/watch
-k8s.io/client-go/tools/metrics
-k8s.io/client-go/transport
-k8s.io/client-go/util/cert
 k8s.io/client-go/kubernetes/typed/admissionregistration/v1beta1
 k8s.io/client-go/kubernetes/typed/apps/v1
 k8s.io/client-go/kubernetes/typed/apps/v1beta1
@@ -234,11 +231,13 @@ k8s.io/client-go/kubernetes/typed/authorization/v1beta1
 k8s.io/client-go/kubernetes/typed/autoscaling/v1
 k8s.io/client-go/kubernetes/typed/autoscaling/v2beta1
 k8s.io/client-go/kubernetes/typed/autoscaling/v2beta2
+k8s.io/client-go/kubernetes/typed/batch/v1
 k8s.io/client-go/kubernetes/typed/batch/v1beta1
 k8s.io/client-go/kubernetes/typed/batch/v2alpha1
 k8s.io/client-go/kubernetes/typed/certificates/v1beta1
 k8s.io/client-go/kubernetes/typed/coordination/v1
 k8s.io/client-go/kubernetes/typed/coordination/v1beta1
+k8s.io/client-go/kubernetes/typed/core/v1
 k8s.io/client-go/kubernetes/typed/events/v1beta1
 k8s.io/client-go/kubernetes/typed/extensions/v1beta1
 k8s.io/client-go/kubernetes/typed/networking/v1
@@ -256,6 +255,16 @@ k8s.io/client-go/kubernetes/typed/settings/v1alpha1
 k8s.io/client-go/kubernetes/typed/storage/v1
 k8s.io/client-go/kubernetes/typed/storage/v1alpha1
 k8s.io/client-go/kubernetes/typed/storage/v1beta1
+k8s.io/client-go/pkg/version
+k8s.io/client-go/plugin/pkg/client/auth/exec
+k8s.io/client-go/rest/watch
+k8s.io/client-go/tools/metrics
+k8s.io/client-go/transport
+k8s.io/client-go/util/cert
+k8s.io/client-go/informers/batch/v1
+k8s.io/client-go/listers/batch/v1
+k8s.io/client-go/informers/core/v1
+k8s.io/client-go/listers/core/v1
 k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/util/workqueue
 k8s.io/client-go/tools/pager
@@ -358,11 +367,11 @@ k8s.io/code-generator/cmd/client-gen/generators/fake
 k8s.io/code-generator/cmd/client-gen/generators/scheme
 k8s.io/code-generator/pkg/namer
 # k8s.io/gengo v0.0.0-20190327210449-e17681d19d3a
+k8s.io/gengo/namer
+k8s.io/gengo/types
 k8s.io/gengo/args
 k8s.io/gengo/examples/deepcopy-gen/generators
-k8s.io/gengo/types
 k8s.io/gengo/generator
-k8s.io/gengo/namer
 k8s.io/gengo/parser
 k8s.io/gengo/examples/set-gen/sets
 # k8s.io/klog v0.3.0
