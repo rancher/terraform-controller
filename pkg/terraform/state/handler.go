@@ -87,6 +87,10 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 		return obj, nil
 	}
 
+	if obj.Spec.Version < 1 {
+		obj.Spec.Version = 1
+	}
+
 	runHash := createRunHash(obj, input, ActionCreate)
 	if runHash == obj.Status.LastRunHash {
 		return obj, nil
@@ -102,9 +106,6 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 
 	logrus.Debug("lock acquired with new hash")
 
-	if obj.Spec.Version < 1 {
-		obj.Spec.Version = 1
-	}
 	if obj.Spec.Image == "" {
 		obj.Spec.Image = fmt.Sprintf("%s:latest", DefaultExecutorImage)
 	}

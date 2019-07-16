@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
 
-#$(dirname $0)/build-cli
+$(dirname $0)/build-cli
 $(dirname $0)/build-executor
 $(dirname $0)/build-controller

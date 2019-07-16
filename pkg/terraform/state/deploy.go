@@ -41,7 +41,7 @@ func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, er
 	or := []metaV1.OwnerReference{
 		{
 			APIVersion: "terraformcontroller.cattle.io/v1",
-			Kind:       "Module",
+			Kind:       "State",
 			Name:       state.Name,
 			UID:        state.UID,
 		},
@@ -55,13 +55,13 @@ func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, er
 	}
 
 	logrus.Debug("Create - Creating secret")
-	_, err = h.createSecretForVariablesFile(or, exec.Name, state, jsonVars)
+	secret, err := h.createSecretForVariablesFile(or, exec.Name, state, jsonVars)
 	if err != nil {
 		return exec, err
 	}
 
 	logrus.Debug("Create - Creating serviceAccount")
-	sa, err := h.createServiceAccount(or, exec.Name, namespace)
+	sa, err := h.createServiceAccount(exec.Name, namespace)
 	if err != nil {
 		return exec, err
 	}
@@ -79,7 +79,7 @@ func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, er
 	}
 
 	logrus.Debug("CreateUpdating owner references")
-	err = h.updateOwnerReference(job, []interface{}{sa, rb}, namespace)
+	err = h.updateOwnerReference(job, []interface{}{sa, rb, secret}, namespace)
 	if err != nil {
 		return exec, err
 	}
@@ -111,7 +111,7 @@ func (h *handler) deployDestroy(state *v1.State, input *Input) (*v1.Execution, e
 	}
 
 	logrus.Debug("Destroy - Creating serviceAccount")
-	sa, err := h.createServiceAccount(or, exec.Name, state.Namespace)
+	sa, err := h.createServiceAccount(exec.Name, state.Namespace)
 	if err != nil {
 		return exec, err
 	}
@@ -150,7 +150,10 @@ func (h *handler) createExecution(
 			Namespace:       state.Namespace,
 			OwnerReferences: or,
 			Annotations:     map[string]string{"approved": ""},
-			Labels:          map[string]string{"state": state.Name},
+			Labels: map[string]string{
+				"state":   state.Name,
+				"runHash": runHash,
+			},
 		},
 		Spec: v1.ExecutionSpec{
 			ExecutionName:    state.Name,
@@ -239,11 +242,10 @@ func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, r
 	return job, nil
 }
 
-func (h *handler) createServiceAccount(or []metaV1.OwnerReference, name, namespace string) (*coreV1.ServiceAccount, error) {
+func (h *handler) createServiceAccount(name, namespace string) (*coreV1.ServiceAccount, error) {
 	meta := metaV1.ObjectMeta{
-		Name:            "sa-" + name,
-		Namespace:       namespace,
-		OwnerReferences: or,
+		Name:      "sa-" + name,
+		Namespace: namespace,
 	}
 	serviceAccount := coreV1.ServiceAccount{
 		ObjectMeta: meta,
