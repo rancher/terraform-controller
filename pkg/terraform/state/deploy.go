@@ -47,40 +47,46 @@ func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, er
 		},
 	}
 
-	logrus.Debug("Create - Creating execution")
+	logrus.Debugf("Create - Creating execution for %s", state.Name)
 	//skip owner reference for executions so logs stay around after deletion
 	exec, err := h.createExecution([]metaV1.OwnerReference{}, state, input, runHash)
 	if err != nil {
+		logrus.Errorf("error creating execution for %s top level %v", state.Name, err)
 		return exec, err
 	}
 
-	logrus.Debug("Create - Creating secret")
+	logrus.Debugf("Create - Creating secret for %s", state.Name)
 	secret, err := h.createSecretForVariablesFile(or, exec.Name, state, jsonVars)
 	if err != nil {
+		logrus.Errorf("error creating secret for %s top level %v", state.Name, err)
 		return exec, err
 	}
 
-	logrus.Debug("Create - Creating serviceAccount")
+	logrus.Debugf("Create - Creating serviceAccount for %s", state.Name)
 	sa, err := h.createServiceAccount(exec.Name, namespace)
 	if err != nil {
+		logrus.Errorf("error creating service account for %s top level %v", state.Name, err)
 		return exec, err
 	}
 
-	logrus.Debug("Create - Creating clusterRoleBinding")
+	logrus.Debugf("Create - Creating clusterRoleBinding for %s", state.Name)
 	rb, err := h.createClusterRoleBinding(or, exec.Name, "cluster-admin", sa.Name, namespace)
 	if err != nil {
+		logrus.Errorf("error creating crb for %s top level %v", state.Name, err)
 		return exec, err
 	}
 
-	logrus.Debug("Create - Creating job")
+	logrus.Debugf("Create - Creating job for %s", state.Name)
 	job, err := h.createJob(or, input, exec.Name, runHash, ActionCreate, sa.Name, namespace)
 	if err != nil {
+		logrus.Errorf("error creating job for %s top level %v", state.Name, err)
 		return exec, err
 	}
 
-	logrus.Debug("CreateUpdating owner references")
+	logrus.Debugf("CreateUpdating owner references for %s", state.Name)
 	err = h.updateOwnerReference(job, []interface{}{sa, rb, secret}, namespace)
 	if err != nil {
+		logrus.Errorf("error creating owner references for %s top level %v", state.Name, err)
 		return exec, err
 	}
 
@@ -167,6 +173,7 @@ func (h *handler) createExecution(
 
 	exec, err := h.executions.Create(execution)
 	if err != nil {
+		logrus.Error(err)
 		return nil, err
 	}
 
@@ -190,10 +197,10 @@ func (h *handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name 
 
 	s, err := h.secrets.Create(secret)
 	if err != nil {
+		logrus.Error(err)
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
-
 		return h.secrets.Get(execution.Namespace, secret.Name, metaV1.GetOptions{})
 	}
 	return s, nil
@@ -233,6 +240,7 @@ func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, r
 
 	job, err := h.jobs.Create(j)
 	if err != nil {
+		logrus.Error(err)
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
@@ -252,6 +260,7 @@ func (h *handler) createServiceAccount(name, namespace string) (*coreV1.ServiceA
 	}
 	sa, err := h.serviceAccounts.Create(&serviceAccount)
 	if err != nil {
+		logrus.Errorf("error while creating service account %v", err)
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
@@ -283,6 +292,7 @@ func (h *handler) createClusterRoleBinding(or []metaV1.OwnerReference, name, rol
 
 	rb, err := h.clusterRoleBindings.Create(&clusterRoleBinding)
 	if err != nil {
+		logrus.Error(err)
 		if !k8sError.IsAlreadyExists(err) {
 			return nil, err
 		}
@@ -474,7 +484,7 @@ func tryUpdate(f func() error) error {
 	for i := 0; i <= 3; i++ {
 		err := f()
 		if err != nil {
-			if k8sError.IsConflict(err) {
+			if k8sError.IsConflict(err) || k8sError.IsNotFound(err) {
 				time.Sleep(time.Duration(timeout) * time.Millisecond)
 				timeout *= 2
 				continue
