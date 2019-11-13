@@ -180,8 +180,8 @@ func (h *handler) OnRemove(key string, obj *v1.State) (*v1.State, error) {
 	}
 
 	runHash := createRunHash(obj, input, ActionDestroy)
-	if runHash == obj.Status.LastRunHash {
-		logrus.Debug("hashes the same, nothing to do")
+	if runHash == obj.Status.LastRunHash && v1.StateConditionJobDeployed.IsTrue(obj) {
+		logrus.Debug("hashes the same and job already deployed, nothing to do")
 		return obj, fmt.Errorf("benign error, hashes are same")
 	}
 
