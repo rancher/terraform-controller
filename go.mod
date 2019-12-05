@@ -8,8 +8,8 @@ require (
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/rancher/wrangler v0.1.0
-	github.com/rancher/wrangler-api v0.1.1
+	github.com/rancher/wrangler v0.2.0
+	github.com/rancher/wrangler-api v0.2.0
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/pflag v1.0.2 // indirect
 	github.com/stretchr/testify v1.3.0

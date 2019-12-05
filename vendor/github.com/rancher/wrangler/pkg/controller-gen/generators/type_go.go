@@ -43,6 +43,7 @@ func (f *typeGo) Imports(*generator.Context) []string {
 		"k8s.io/apimachinery/pkg/labels",
 		"k8s.io/apimachinery/pkg/runtime",
 		"k8s.io/apimachinery/pkg/runtime/schema",
+		"k8s.io/apimachinery/pkg/api/equality",
 		"k8s.io/apimachinery/pkg/types",
 		"utilruntime \"k8s.io/apimachinery/pkg/util/runtime\"",
 		"k8s.io/apimachinery/pkg/watch",
@@ -212,7 +213,7 @@ func (c *{{.lowerName}}Controller) OnRemove(ctx context.Context, name string, sy
 }
 
 func (c *{{.lowerName}}Controller) Enqueue({{ if .namespaced}}namespace, {{end}}name string) {
-	c.controllerManager.Enqueue(c.gvk, {{ if .namespaced }}namespace, {{else}}"", {{end}}name)
+	c.controllerManager.Enqueue(c.gvk, c.informer.Informer(), {{ if .namespaced }}namespace, {{else}}"", {{end}}name)
 }
 
 func (c *{{.lowerName}}Controller) Informer() cache.SharedIndexInformer {

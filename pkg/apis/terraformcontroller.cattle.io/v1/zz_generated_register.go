@@ -27,6 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var (
+	ExecutionResourceName = "executions"
+	ModuleResourceName    = "modules"
+	StateResourceName     = "states"
+)
+
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: terraformcontroller.GroupName, Version: "v1"}
 

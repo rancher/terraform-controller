@@ -159,7 +159,7 @@ func (c *jobController) OnRemove(ctx context.Context, name string, sync JobHandl
 }
 
 func (c *jobController) Enqueue(namespace, name string) {
-	c.controllerManager.Enqueue(c.gvk, namespace, name)
+	c.controllerManager.Enqueue(c.gvk, c.informer.Informer(), namespace, name)
 }
 
 func (c *jobController) Informer() cache.SharedIndexInformer {
