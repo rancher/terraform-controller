@@ -49,14 +49,14 @@ func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, er
 
 	logrus.Debugf("Create - Creating execution for %s", state.Name)
 	//skip owner reference for executions so logs stay around after deletion
-	exec, err := h.createExecution([]metaV1.OwnerReference{}, state, input, runHash)
+	exec, err := h.createExecution(or, state, input, runHash)
 	if err != nil {
 		logrus.Errorf("error creating execution for %s top level %v", state.Name, err)
 		return exec, err
 	}
 
 	logrus.Debugf("Create - Creating secret for %s", state.Name)
-	secret, err := h.createSecretForVariablesFile(or, exec.Name, state, jsonVars)
+	secret, err := h.createSecretForVariablesFile([]metaV1.OwnerReference{}, exec.Name, state, jsonVars)
 	if err != nil {
 		logrus.Errorf("error creating secret for %s top level %v", state.Name, err)
 		return exec, err
@@ -70,7 +70,7 @@ func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, er
 	}
 
 	logrus.Debugf("Create - Creating clusterRoleBinding for %s", state.Name)
-	rb, err := h.createClusterRoleBinding(or, exec.Name, "cluster-admin", sa.Name, namespace)
+	rb, err := h.createClusterRoleBinding([]metaV1.OwnerReference{}, exec.Name, "cluster-admin", sa.Name, namespace)
 	if err != nil {
 		logrus.Errorf("error creating crb for %s top level %v", state.Name, err)
 		return exec, err
@@ -102,7 +102,14 @@ func (h *handler) deployDestroy(state *v1.State, input *Input) (*v1.Execution, e
 		return nil, err
 	}
 
-	or := []metaV1.OwnerReference{}
+	or := []metaV1.OwnerReference{
+		{
+			APIVersion: "terraformcontroller.cattle.io/v1",
+			Kind:       "State",
+			Name:       state.Name,
+			UID:        state.UID,
+		},
+	}
 
 	logrus.Debug("Destroy - Creating execution")
 	exec, err := h.createExecution(or, state, input, runHash)
@@ -111,7 +118,7 @@ func (h *handler) deployDestroy(state *v1.State, input *Input) (*v1.Execution, e
 	}
 
 	logrus.Debug("Destroy - Creating secret")
-	secret, err := h.createSecretForVariablesFile(or, exec.Name, state, jsonVars)
+	secret, err := h.createSecretForVariablesFile([]metaV1.OwnerReference{}, exec.Name, state, jsonVars)
 	if err != nil {
 		return exec, err
 	}
@@ -123,7 +130,7 @@ func (h *handler) deployDestroy(state *v1.State, input *Input) (*v1.Execution, e
 	}
 
 	logrus.Debug("Destroy - Creating clusterRoleBinding")
-	rb, err := h.createClusterRoleBinding(or, exec.Name, "cluster-admin", sa.Name, state.Namespace)
+	rb, err := h.createClusterRoleBinding([]metaV1.OwnerReference{}, exec.Name, "cluster-admin", sa.Name, state.Namespace)
 	if err != nil {
 		return exec, err
 	}
