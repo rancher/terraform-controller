@@ -83,6 +83,7 @@ type StateSpec struct {
 	AutoConfirm     bool              `json:"autoConfirm,omitempty"`
 	DestroyOnDelete bool              `json:"destroyOnDelete,omitempty"`
 	Version         int32             `json:"version,omitempty"`
+	NodeSelector    map[string]string `json:"nodeSelector,omitempty"`
 }
 
 type StateStatus struct {
