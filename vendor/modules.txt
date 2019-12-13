@@ -38,7 +38,7 @@ github.com/modern-go/reflect2
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/rancher/wrangler v0.1.0
+# github.com/rancher/wrangler v0.2.0
 github.com/rancher/wrangler/pkg/resolvehome
 github.com/rancher/wrangler/pkg/signals
 github.com/rancher/wrangler/pkg/start
@@ -49,10 +49,11 @@ github.com/rancher/wrangler/pkg/controller-gen
 github.com/rancher/wrangler/pkg/controller-gen/args
 github.com/rancher/wrangler/pkg/cleanup
 github.com/rancher/wrangler/pkg/generic
+github.com/rancher/wrangler/pkg/schemes
 github.com/rancher/wrangler/pkg/kv
 github.com/rancher/wrangler/pkg/name
 github.com/rancher/wrangler/pkg/controller-gen/generators
-# github.com/rancher/wrangler-api v0.1.1
+# github.com/rancher/wrangler-api v0.2.0
 github.com/rancher/wrangler-api/pkg/generated/controllers/batch
 github.com/rancher/wrangler-api/pkg/generated/controllers/core
 github.com/rancher/wrangler-api/pkg/generated/controllers/rbac
@@ -213,6 +214,7 @@ k8s.io/client-go/testing
 k8s.io/client-go/tools/cache
 k8s.io/client-go/informers
 k8s.io/client-go/informers/batch
+k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/informers/core
 k8s.io/client-go/informers/rbac
 k8s.io/client-go/tools/auth
@@ -265,7 +267,6 @@ k8s.io/client-go/informers/batch/v1
 k8s.io/client-go/listers/batch/v1
 k8s.io/client-go/informers/core/v1
 k8s.io/client-go/listers/core/v1
-k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/util/workqueue
 k8s.io/client-go/tools/pager
 k8s.io/client-go/util/retry

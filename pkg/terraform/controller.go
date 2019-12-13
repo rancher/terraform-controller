@@ -42,7 +42,7 @@ func Register(
 	modules.OnChange(ctx, "modules-handler", moduleHandler.OnChange)
 	modules.OnRemove(ctx, "modules-handler", moduleHandler.OnRemove)
 
-	executionHandler := execution.NewHandler(ctx, executions, modules)
+	executionHandler := execution.NewHandler(ctx, executions, states, modules)
 	executions.OnChange(ctx, "execution-handler", executionHandler.OnChange)
 	executions.OnRemove(ctx, "execution-handler", executionHandler.OnRemove)
 }
