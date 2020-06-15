@@ -11,7 +11,7 @@ fi
 
 cd $(dirname $0)/..
 
-k3s server&
+k3s server --disable servicelb --disable traefik --disable local-storage --disable metrics-server&
 k3s_pid=$!
 
 kubeconfig=/etc/rancher/k3s/k3s.yaml
