@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+source $(dirname $0)/version
+
+ARCH=${ARCH:-"amd64"}
+SUFFIX=""
+[ "${ARCH}" != "amd64" ] && SUFFIX="_${ARCH}"
+
+cd $(dirname $0)/../package
+
+cp ../bin/terraform-executor .
+
+IMAGE=terraform-controller-executor:e2e
+docker build -t ${IMAGE} -f Dockerfile.executor .
+mkdir -p ../artifacts/images
+docker image save terraform-controller-executor:e2e -o ../artifacts/images/terraform-controller-executor-e2e
+echo Built ${IMAGE}
