@@ -135,7 +135,7 @@ func (e *E2E) getState() *tfv1.State {
 			ModuleName:      e.generateModuleName(),
 			AutoConfirm:     true,
 			DestroyOnDelete: true,
-			Image:           "rancher/terraform-controller-executor:v0.0.10-alpha1",
+			Image:           "terraform-controller-executor:e2e",
 			Variables: tfv1.Variables{
 				ConfigNames:    []string{e.generateConfigMapName()},
 				EnvConfigName:  []string{e.generateConfigMapEnvName()},

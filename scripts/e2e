@@ -9,6 +9,12 @@ if [ ! -f ./bin/terraform-controller ]; then
     $(dirname $0)/build-controller
 fi
 
+if [ ! -f ./bin/terraform-executor ]; then
+    $(dirname $0)/build-executor
+fi
+
+$(dirname $0)/e2e-package-executor
+
 cd $(dirname $0)/..
 
 k3s server --disable servicelb --disable traefik --disable local-storage --disable metrics-server&
@@ -25,6 +31,10 @@ until [ -f $kubeconfig ]; do
     sleep 2
     i+=1
 done
+
+k3s ctr images import --base-name terraform-controller-executor artifacts/images/terraform-controller-executor-e2e
+
+k3s kubectl rollout status deployment coredns -n kube-system # make sure coredns is actually running
 
 export KUBECONFIG=$kubeconfig
 export NAMESPACE=terraform-controller
