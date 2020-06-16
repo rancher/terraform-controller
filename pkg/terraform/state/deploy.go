@@ -240,7 +240,7 @@ func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, r
 						},
 					},
 					NodeSelector:  nodeSelector,
-					RestartPolicy: "OnFailure",
+					RestartPolicy: "Never",
 				},
 			},
 		},
