@@ -18,7 +18,7 @@ spec:
     spec:
       serviceAccountName: terraform-controller
       containers:
-        - image: rancher/terraform-controller:v0.0.10-alpha1
+        - image: rancher/terraform-controller:v0.0.11-alpha1
           name: terraform-controller
           command: ["terraform-controller"]
           args: ["--namespace", "terraform-controller"]
