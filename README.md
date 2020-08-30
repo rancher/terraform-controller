@@ -5,7 +5,7 @@
 
 **NOTE:** We are actively experimenting with this in the open. Consider this ALPHA software and subject to change.
 
-Terraform-controller - This is a low level tool to run Git controlled Terraform modules in Kubernetes. The controller manages the TF state file using Kubernetes as a remote statefile backend! [Backend upstream PR](https://github.com/hashicorp/terraform/pull/19525) You can have changes auto-applied or wait for an explicit "OK" before running. 
+Terraform-controller - This is a low level tool to run Git controlled Terraform modules in Kubernetes. The controller manages the TF state file using Kubernetes as a remote statefile backend (requires Terraform 0.13.1)! You can have changes auto-applied or wait for an explicit "OK" before running. 
 
 There are two parts to the stack, the controller and the executor. 
 

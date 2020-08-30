@@ -26,8 +26,8 @@ type controllers struct {
 }
 
 const (
-	terraState = "terrastate"
-	terraKey   = "terraKey"
+	terraState = "tfstate"
+	terraKey   = "tfstateSecretSuffix"
 )
 
 var controllerCache *controllers

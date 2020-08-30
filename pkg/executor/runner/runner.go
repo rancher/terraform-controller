@@ -290,9 +290,9 @@ func (r *Runner) WriteConfigFile() error {
 		Terraform: Terraform{
 			Backend: map[string]*Backend{
 				"kubernetes": {
-					Key:            r.Execution.Spec.ExecutionName,
-					Namespace:      r.Execution.Namespace,
-					ServiceAccount: "true",
+					SecretSuffix:    r.Execution.Spec.ExecutionName,
+					Namespace:       r.Execution.Namespace,
+					InClusterConfig: "true",
 				},
 			},
 		},
@@ -316,7 +316,7 @@ func (r *Runner) WriteVarFile() error {
 	if !ok {
 		return fmt.Errorf("no varFile data found in secret %v", r.VarSecret.Name)
 	}
-	err := writer.Write(vars, fmt.Sprintf("/root/module/%v.auto.tfvars", r.Execution.Name))
+	err := writer.Write(vars, fmt.Sprintf("/root/module/%v.auto.tfvars.json", r.Execution.Name))
 	if err != nil {
 		return err
 	}
