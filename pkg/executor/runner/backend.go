@@ -9,7 +9,7 @@ type Terraform struct {
 }
 
 type Backend struct {
-	Namespace      string `json:"namespace,omitempty"`
-	Key            string `json:"key,omitempty"`
-	ServiceAccount string `json:"service_account,omitempty"`
+	Namespace       string `json:"namespace,omitempty"`
+	SecretSuffix    string `json:"secret_suffix,omitempty"`
+	InClusterConfig string `json:"in_cluster_config,omitempty"`
 }
