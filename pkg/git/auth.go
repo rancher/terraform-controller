@@ -55,7 +55,7 @@ func (a Auth) Populate(url string) (string, []string, func()) {
 	return url, env, close
 }
 
-func (b Basic) fromSecret(secret map[string][]byte) bool {
+func (b *Basic) fromSecret(secret map[string][]byte) bool {
 	username, unameOK := secret[BasicAuthUsernameKey]
 	if unameOK {
 		b.Username = string(username)
