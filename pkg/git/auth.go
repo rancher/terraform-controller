@@ -68,7 +68,7 @@ func (b *Basic) fromSecret(secret map[string][]byte) bool {
 	return unameOK && pwdOK
 }
 
-func (b Basic) populate(gitURL string) string {
+func (b *Basic) populate(gitURL string) string {
 	if b.Username == "" && b.Password == "" {
 		return gitURL
 	}
@@ -82,7 +82,7 @@ func (b Basic) populate(gitURL string) string {
 	return u.String()
 }
 
-func (s SSH) fromSecret(secret map[string][]byte) bool {
+func (s *SSH) fromSecret(secret map[string][]byte) bool {
 	key, ok := secret[SSHAuthPrivateKey]
 	if ok {
 		s.Key = key
@@ -90,7 +90,7 @@ func (s SSH) fromSecret(secret map[string][]byte) bool {
 	return ok
 }
 
-func (s SSH) populate() ([]string, func()) {
+func (s *SSH) populate() ([]string, func()) {
 	if len(s.Key) == 0 {
 		return nil, noop
 	}
