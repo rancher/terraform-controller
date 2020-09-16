@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 
@@ -15,24 +16,30 @@ func terraform(ctx context.Context, env []string, args ...string) ([]string, err
 	cmd := exec.CommandContext(ctx, "terraform", args...)
 	cmd.Env = append(os.Environ(), env...)
 
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatalf("could not get stdout pipe: %v", err)
+	}
 	var (
-		out    bytes.Buffer
 		errOut bytes.Buffer
 	)
-	cmd.Stdout = &out
 	cmd.Stderr = &errOut
-	err := cmd.Run()
+
+	err = cmd.Start()
 	if err != nil {
 		return nil, errors.Wrap(err, errOut.String())
 	}
 
 	var output []string
-	s := bufio.NewScanner(&out)
+
+	s := bufio.NewScanner(stdout)
 	for s.Scan() {
 		line := s.Text()
 		fmt.Println(line)
 		output = append(output, line)
 	}
+
+	cmd.Wait()
 
 	return output, s.Err()
 }

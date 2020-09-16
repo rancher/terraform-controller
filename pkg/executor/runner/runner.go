@@ -82,12 +82,10 @@ func (r *Runner) TerraformInit() (string, error) {
 // set it will run 'plan' then 'apply', if the flag is not set 'plan' will run then
 // the job will wait for the approved annotation to be set then the job will run 'apply' or exit.
 func (r *Runner) Create() (string, error) {
-	out, err := terraform.Plan(false)
+	_, err := terraform.Plan(false)
 	if err != nil {
 		return "", err
 	}
-
-	fmt.Println(out)
 
 	err = r.SetExecutionRunStatus("planned")
 	if err != nil {
@@ -126,12 +124,10 @@ func (r *Runner) Create() (string, error) {
 // the job will wait for the approved approved to be set then the job will run 'destroy'
 // or exit
 func (r *Runner) Destroy() (string, error) {
-	out, err := terraform.Plan(true)
+	_, err := terraform.Plan(true)
 	if err != nil {
 		return "", err
 	}
-
-	fmt.Println(out)
 
 	// We have autoConfirm, run destroy
 	if r.Execution.Spec.AutoConfirm {
