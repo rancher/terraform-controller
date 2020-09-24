@@ -27,8 +27,8 @@ func Destroy() (string, error) {
 	return combineOutput(output), nil
 }
 
-func Init(ctx context.Context) (string, error) {
-	output, err := terraform(ctx, os.Environ(), "init", "-input=false")
+func Init() (string, error) {
+	output, err := terraform(context.Background(), os.Environ(), "init", "-input=false")
 	if err != nil {
 		return "", err
 	}

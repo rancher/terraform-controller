@@ -23,19 +23,19 @@ func CloneRepo(ctx context.Context, url string, commit string, auth *Auth) error
 	url, env, close := auth.Populate(url)
 	defer close()
 
-	lines, err := git(ctx, env, "clone", "--progress", "-n", url, ".")
+	lines, err := git(ctx, env, "clone", "-n", url, ".")
 	if err != nil {
 		return err
 	}
 
-	logrus.Infof("git cloned")
+	logrus.Infof("git cloned %v", lines)
 
 	lines, err = git(ctx, env, "checkout", commit)
 	if err != nil {
 		return err
 	}
 
-	logrus.Infof("code checked out")
+	logrus.Infof("code checked out %v", lines)
 
 	return nil
 }
