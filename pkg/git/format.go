@@ -6,17 +6,13 @@ import (
 	"strings"
 )
 
-func firstField(lines []string, errText string) (string, error) {
+func firstField(lines string, errText string) (string, error) {
 	if len(lines) == 0 {
 		return "", errors.New(errText)
 	}
 
-	fields := strings.Fields(lines[0])
+	fields := strings.Fields(lines)
 	if len(fields) == 0 {
-		return "", errors.New(errText)
-	}
-
-	if len(fields[0]) == 0 {
 		return "", errors.New(errText)
 	}
 

@@ -82,14 +82,9 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rancher/moq v0.0.0-20190404221404-ee5226d43009 h1:Xsxh7fX3+2wAUJtPy8g2lZh0cYuyifqhBL0vxCIYojs=
 github.com/rancher/moq v0.0.0-20190404221404-ee5226d43009/go.mod h1:wpITyDPTi/Na5h73XkbuEf2AP9fbgrIGqqxVzFhYD6U=
-github.com/rancher/wrangler v0.0.0-20190516181950-a7cf48fa83ef/go.mod h1:EYP7cqpg42YqElaCm+U9ieSrGQKAXxUH5xsr+XGpWyE=
-github.com/rancher/wrangler v0.1.0 h1:AIvfe1KLVbj7vsp/pWXeBrjxqP7hHZHHECxsniTC78M=
-github.com/rancher/wrangler v0.1.0/go.mod h1:EYP7cqpg42YqElaCm+U9ieSrGQKAXxUH5xsr+XGpWyE=
 github.com/rancher/wrangler v0.1.4/go.mod h1:EYP7cqpg42YqElaCm+U9ieSrGQKAXxUH5xsr+XGpWyE=
 github.com/rancher/wrangler v0.2.0 h1:ENg7iac/aLgCbugUYosUMG7Kj97i4qMPejjqZFVorbw=
 github.com/rancher/wrangler v0.2.0/go.mod h1:TLc4vXF21FWz2MYNHny5zDwFwBqvgBViU5n9CHrJRQ0=
-github.com/rancher/wrangler-api v0.1.1 h1:qzIgDnURHTlJ31jMTy917L3y0tAjYRaHhMdmT+Z393s=
-github.com/rancher/wrangler-api v0.1.1/go.mod h1:vholckBg588JqP3M3vyEDUz/ERaB1M3ilnCuV5XxPHM=
 github.com/rancher/wrangler-api v0.2.0 h1:VR7hLNnDrKykKLqthtwZ58pDDtUa9ijSNToPaJLEkWc=
 github.com/rancher/wrangler-api v0.2.0/go.mod h1:zTPdNLZO07KvRaVOx6XQbKBSV55Fnn4s7nqmrMPJqd8=
 github.com/sirupsen/logrus v1.4.1 h1:GL2rEmy6nsikmW0r8opw9JIRScdMF5hA8cOYLH7In1k=
