@@ -2,48 +2,65 @@
 package terraform
 
 import (
-	"context"
-	"os"
 	"strings"
+
+	"github.com/rancher/terraform-controller/pkg/cmd"
+
 )
 
 const newLine = "\n"
 
 func Apply() (string, error) {
-	output, err := terraform(context.Background(), os.Environ(), "apply", "-input=false", "-auto-approve", "tfplan")
+	var cmd = shell.Command{
+                Command: "terraform",
+                Args:    []string{"apply", "-input=false", "-auto-approve", "tfplan"},
+        }
+	output, err := shell.Execute(cmd)
 	if err != nil {
 		return "", err
 	}
 
-	return combineOutput(output), nil
+	return output, nil
 }
 
 func Destroy() (string, error) {
-	output, err := terraform(context.Background(), os.Environ(), "destroy", "-input=false", "-auto-approve")
+	var cmd = shell.Command{
+                Command: "terraform",
+                Args:    []string{"destroy", "-input=false", "-auto-approve"},
+        }
+	output, err := shell.Execute(cmd)
 	if err != nil {
 		return "", err
 	}
 
-	return combineOutput(output), nil
+	return output, nil
 }
 
 func Init() (string, error) {
-	output, err := terraform(context.Background(), os.Environ(), "init", "-input=false")
+	var cmd = shell.Command{
+                Command: "terraform",
+                Args:    []string{"init", "-input=false"},
+        }
+	output, err := shell.Execute(cmd)
 	if err != nil {
 		return "", err
 	}
 
-	return combineOutput(output), nil
+	return output, nil
 }
 
 // Output runs 'terraform output -json' and returns the blob as a string
 func Output() (string, error) {
-	output, err := terraform(context.Background(), os.Environ(), "output", "-json")
+	var cmd = shell.Command{
+                Command: "terraform",
+                Args:    []string{"output", "-json"},
+        }
+	output, err := shell.Execute(cmd)
 	if err != nil {
 		return "", err
 	}
 
-	return combineOutput(output), nil
+	return output, nil
 }
 
 // Plan runs 'terraform plan' with the destroy flag controlling the play type
@@ -53,12 +70,16 @@ func Plan(destroy bool) (string, error) {
 		args = append(args, "-destroy")
 	}
 
-	output, err := terraform(context.Background(), os.Environ(), args...)
+	var cmd = shell.Command{
+                Command: "terraform",
+                Args:    args,
+        }
+	output, err := shell.Execute(cmd)
 	if err != nil {
 		return "", err
 	}
 
-	return combineOutput(output), nil
+	return output, nil
 }
 
 func combineOutput(in []string) string {
