@@ -448,7 +448,6 @@ func createEnvForJob(input *Input, action, runName, namespace string) {
 
 func getCombinedVars(state *v1.State, input *Input) map[string]string {
 	combinedVars := combineVars(input)
-	combinedVars["key"] = state.Name
 
 	return combinedVars
 }
