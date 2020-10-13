@@ -12,7 +12,6 @@ import (
 	"github.com/rancher/terraform-controller/pkg/interval"
 	corev1 "github.com/rancher/wrangler-api/pkg/generated/controllers/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func NewHandler(ctx context.Context, modules tfv1.ModuleController, secrets corev1.SecretController) *handler {
@@ -35,20 +34,17 @@ func (h *handler) OnChange(key string, module *v1.Module) (*v1.Module, error) {
 	}
 
 	if isPolling(module.Spec) && needsUpdate(module) {
-		v1.ModuleConditionGitUpdated.False(module)
-		return tfv1.UpdateModuleOnChange(func(module runtime.Object) (runtime.Object, error) {
-			v1.ModuleConditionGitUpdated.True(module)
-			return h.modules.Update(module.(*v1.Module))
-		}, h.updateCommit)(key, module)
+		h.updateCommit(key, module)
 	}
-	//
 	hash := computeHash(module)
 	if module.Status.ContentHash != hash {
 		return h.updateHash(module, hash)
 	}
 
-	return h.modules.Update(module)
-	//return module, nil
+	h.modules.Update(module)
+	h.modules.UpdateStatus(module)
+	h.modules.EnqueueAfter(module.Namespace, module.Name, time.Duration(module.Spec.Git.IntervalSeconds)*time.Second)
+	return module, nil
 }
 
 func (h *handler) OnRemove(key string, module *v1.Module) (*v1.Module, error) {
@@ -63,6 +59,7 @@ func (h *handler) updateHash(module *v1.Module, hash string) (*v1.Module, error)
 	if isPolling(module.Spec) && module.Status.GitChecked != nil {
 		module.Status.Content.Git.Commit = module.Status.GitChecked.Commit
 	}
+	h.modules.UpdateStatus(module)
 	return h.modules.Update(module)
 }
 
@@ -85,7 +82,8 @@ func (h *handler) updateCommit(key string, module *v1.Module) (*v1.Module, error
 	gitChecked := module.Spec.Git
 	gitChecked.Commit = commit
 	module.Status.GitChecked = &gitChecked
-	module.Status.CheckTime = metav1.NewTime(time.Now())
+	module.Status.CheckTime = metav1.Now()
+//	h.modules.UpdateStatus(module)
 
 	return module, nil
 }
