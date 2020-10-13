@@ -106,10 +106,6 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 		obj.Spec.Version = 1
 	}
 
-	if obj.Spec.Version < 1 {
-		obj.Spec.Version = 1
-	}
-
 	runHash := createRunHash(obj, input, ActionCreate)
 	if runHash == obj.Status.LastRunHash {
 		logrus.Debugf("last run hash is %s", runHash)
@@ -127,6 +123,7 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 
 	if obj.Spec.Image == "" {
 		obj.Spec.Image = fmt.Sprintf("%s:latest", DefaultExecutorImage)
+		input.Image = obj.Spec.Image
 	}
 
 	//new execution if none running
@@ -139,7 +136,6 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 	v1.StateConditionJobDeployed.True(obj)
 	obj.Status.ExecutionName = exec.Name
 	obj.Status.LastRunHash = runHash
-
 	return h.states.Update(obj)
 }
 

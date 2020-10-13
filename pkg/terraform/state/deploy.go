@@ -157,9 +157,11 @@ func (h *handler) createExecution(
 	input *Input,
 	runHash string,
 ) (*v1.Execution, error) {
+	execName := state.Name + "-" + runHash
+	secretName := "s-" + execName
 	execution := &v1.Execution{
 		ObjectMeta: metaV1.ObjectMeta{
-			GenerateName:    state.Name + "-",
+			Name:            execName,
 			Namespace:       state.Namespace,
 			OwnerReferences: or,
 			Annotations:     map[string]string{"approved": ""},
@@ -173,19 +175,13 @@ func (h *handler) createExecution(
 			AutoConfirm:      state.Spec.AutoConfirm,
 			Content:          input.Module.Status.Content,
 			ContentHash:      input.Module.Status.ContentHash,
+			SecretName:       secretName,
 			RunHash:          runHash,
 			ExecutionVersion: state.Spec.Version,
 		},
 	}
 
-	exec, err := h.executions.Create(execution)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-
-	exec.Spec.SecretName = "s-" + exec.Name
-	return h.executions.Update(exec)
+	return h.executions.Create(execution)
 }
 
 func (h *handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name string, execution *v1.State, vars []byte) (*coreV1.Secret, error) {
