@@ -20,13 +20,17 @@ package v1
 
 import (
 	"context"
+	"time"
 
+	"github.com/rancher/lasso/pkg/client"
+	"github.com/rancher/lasso/pkg/controller"
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
-	clientset "github.com/rancher/terraform-controller/pkg/generated/clientset/versioned/typed/terraformcontroller.cattle.io/v1"
-	informers "github.com/rancher/terraform-controller/pkg/generated/informers/externalversions/terraformcontroller.cattle.io/v1"
-	listers "github.com/rancher/terraform-controller/pkg/generated/listers/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/wrangler/pkg/apply"
+	"github.com/rancher/wrangler/pkg/condition"
 	"github.com/rancher/wrangler/pkg/generic"
+	"github.com/rancher/wrangler/pkg/kv"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,20 +44,15 @@ import (
 type ModuleHandler func(string, *v1.Module) (*v1.Module, error)
 
 type ModuleController interface {
+	generic.ControllerMeta
 	ModuleClient
 
 	OnChange(ctx context.Context, name string, sync ModuleHandler)
 	OnRemove(ctx context.Context, name string, sync ModuleHandler)
 	Enqueue(namespace, name string)
+	EnqueueAfter(namespace, name string, duration time.Duration)
 
 	Cache() ModuleCache
-
-	Informer() cache.SharedIndexInformer
-	GroupVersionKind() schema.GroupVersionKind
-
-	AddGenericHandler(ctx context.Context, name string, handler generic.Handler)
-	AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler)
-	Updater() generic.Updater
 }
 
 type ModuleClient interface {
@@ -78,18 +77,22 @@ type ModuleCache interface {
 type ModuleIndexer func(obj *v1.Module) ([]string, error)
 
 type moduleController struct {
-	controllerManager *generic.ControllerManager
-	clientGetter      clientset.ModulesGetter
-	informer          informers.ModuleInformer
-	gvk               schema.GroupVersionKind
+	controller    controller.SharedController
+	client        *client.Client
+	gvk           schema.GroupVersionKind
+	groupResource schema.GroupResource
 }
 
-func NewModuleController(gvk schema.GroupVersionKind, controllerManager *generic.ControllerManager, clientGetter clientset.ModulesGetter, informer informers.ModuleInformer) ModuleController {
+func NewModuleController(gvk schema.GroupVersionKind, resource string, namespaced bool, controller controller.SharedControllerFactory) ModuleController {
+	c := controller.ForResourceKind(gvk.GroupVersion().WithResource(resource), gvk.Kind, namespaced)
 	return &moduleController{
-		controllerManager: controllerManager,
-		clientGetter:      clientGetter,
-		informer:          informer,
-		gvk:               gvk,
+		controller: c,
+		client:     c.Client(),
+		gvk:        gvk,
+		groupResource: schema.GroupResource{
+			Group:    gvk.Group,
+			Resource: resource,
+		},
 	}
 }
 
@@ -118,35 +121,29 @@ func (c *moduleController) Updater() generic.Updater {
 	}
 }
 
-func UpdateModuleOnChange(updater generic.Updater, handler ModuleHandler) ModuleHandler {
-	return func(key string, obj *v1.Module) (*v1.Module, error) {
-		if obj == nil {
-			return handler(key, nil)
-		}
-
-		copyObj := obj.DeepCopy()
-		newObj, err := handler(key, copyObj)
-		if newObj != nil {
-			copyObj = newObj
-		}
-		if obj.ResourceVersion == copyObj.ResourceVersion && !equality.Semantic.DeepEqual(obj, copyObj) {
-			newObj, err := updater(copyObj)
-			if newObj != nil && err == nil {
-				copyObj = newObj.(*v1.Module)
-			}
-		}
-
-		return copyObj, err
+func UpdateModuleDeepCopyOnChange(client ModuleClient, obj *v1.Module, handler func(obj *v1.Module) (*v1.Module, error)) (*v1.Module, error) {
+	if obj == nil {
+		return obj, nil
 	}
+
+	copyObj := obj.DeepCopy()
+	newObj, err := handler(copyObj)
+	if newObj != nil {
+		copyObj = newObj
+	}
+	if obj.ResourceVersion == copyObj.ResourceVersion && !equality.Semantic.DeepEqual(obj, copyObj) {
+		return client.Update(copyObj)
+	}
+
+	return copyObj, err
 }
 
 func (c *moduleController) AddGenericHandler(ctx context.Context, name string, handler generic.Handler) {
-	c.controllerManager.AddHandler(ctx, c.gvk, c.informer.Informer(), name, handler)
+	c.controller.RegisterHandler(ctx, name, controller.SharedControllerHandlerFunc(handler))
 }
 
 func (c *moduleController) AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler) {
-	removeHandler := generic.NewRemoveHandler(name, c.Updater(), handler)
-	c.controllerManager.AddHandler(ctx, c.gvk, c.informer.Informer(), name, removeHandler)
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), handler))
 }
 
 func (c *moduleController) OnChange(ctx context.Context, name string, sync ModuleHandler) {
@@ -154,16 +151,19 @@ func (c *moduleController) OnChange(ctx context.Context, name string, sync Modul
 }
 
 func (c *moduleController) OnRemove(ctx context.Context, name string, sync ModuleHandler) {
-	removeHandler := generic.NewRemoveHandler(name, c.Updater(), FromModuleHandlerToHandler(sync))
-	c.AddGenericHandler(ctx, name, removeHandler)
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), FromModuleHandlerToHandler(sync)))
 }
 
 func (c *moduleController) Enqueue(namespace, name string) {
-	c.controllerManager.Enqueue(c.gvk, c.informer.Informer(), namespace, name)
+	c.controller.Enqueue(namespace, name)
+}
+
+func (c *moduleController) EnqueueAfter(namespace, name string, duration time.Duration) {
+	c.controller.EnqueueAfter(namespace, name, duration)
 }
 
 func (c *moduleController) Informer() cache.SharedIndexInformer {
-	return c.informer.Informer()
+	return c.controller.Informer()
 }
 
 func (c *moduleController) GroupVersionKind() schema.GroupVersionKind {
@@ -172,54 +172,75 @@ func (c *moduleController) GroupVersionKind() schema.GroupVersionKind {
 
 func (c *moduleController) Cache() ModuleCache {
 	return &moduleCache{
-		lister:  c.informer.Lister(),
-		indexer: c.informer.Informer().GetIndexer(),
+		indexer:  c.Informer().GetIndexer(),
+		resource: c.groupResource,
 	}
 }
 
 func (c *moduleController) Create(obj *v1.Module) (*v1.Module, error) {
-	return c.clientGetter.Modules(obj.Namespace).Create(obj)
+	result := &v1.Module{}
+	return result, c.client.Create(context.TODO(), obj.Namespace, obj, result, metav1.CreateOptions{})
 }
 
 func (c *moduleController) Update(obj *v1.Module) (*v1.Module, error) {
-	return c.clientGetter.Modules(obj.Namespace).Update(obj)
+	result := &v1.Module{}
+	return result, c.client.Update(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
 func (c *moduleController) UpdateStatus(obj *v1.Module) (*v1.Module, error) {
-	return c.clientGetter.Modules(obj.Namespace).UpdateStatus(obj)
+	result := &v1.Module{}
+	return result, c.client.UpdateStatus(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
 func (c *moduleController) Delete(namespace, name string, options *metav1.DeleteOptions) error {
-	return c.clientGetter.Modules(namespace).Delete(name, options)
+	if options == nil {
+		options = &metav1.DeleteOptions{}
+	}
+	return c.client.Delete(context.TODO(), namespace, name, *options)
 }
 
 func (c *moduleController) Get(namespace, name string, options metav1.GetOptions) (*v1.Module, error) {
-	return c.clientGetter.Modules(namespace).Get(name, options)
+	result := &v1.Module{}
+	return result, c.client.Get(context.TODO(), namespace, name, result, options)
 }
 
 func (c *moduleController) List(namespace string, opts metav1.ListOptions) (*v1.ModuleList, error) {
-	return c.clientGetter.Modules(namespace).List(opts)
+	result := &v1.ModuleList{}
+	return result, c.client.List(context.TODO(), namespace, result, opts)
 }
 
 func (c *moduleController) Watch(namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientGetter.Modules(namespace).Watch(opts)
+	return c.client.Watch(context.TODO(), namespace, opts)
 }
 
-func (c *moduleController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Module, err error) {
-	return c.clientGetter.Modules(namespace).Patch(name, pt, data, subresources...)
+func (c *moduleController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (*v1.Module, error) {
+	result := &v1.Module{}
+	return result, c.client.Patch(context.TODO(), namespace, name, pt, data, result, metav1.PatchOptions{}, subresources...)
 }
 
 type moduleCache struct {
-	lister  listers.ModuleLister
-	indexer cache.Indexer
+	indexer  cache.Indexer
+	resource schema.GroupResource
 }
 
 func (c *moduleCache) Get(namespace, name string) (*v1.Module, error) {
-	return c.lister.Modules(namespace).Get(name)
+	obj, exists, err := c.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(c.resource, name)
+	}
+	return obj.(*v1.Module), nil
 }
 
-func (c *moduleCache) List(namespace string, selector labels.Selector) ([]*v1.Module, error) {
-	return c.lister.Modules(namespace).List(selector)
+func (c *moduleCache) List(namespace string, selector labels.Selector) (ret []*v1.Module, err error) {
+
+	err = cache.ListAllByNamespace(c.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.Module))
+	})
+
+	return ret, err
 }
 
 func (c *moduleCache) AddIndexer(indexName string, indexer ModuleIndexer) {
@@ -235,8 +256,117 @@ func (c *moduleCache) GetByIndex(indexName, key string) (result []*v1.Module, er
 	if err != nil {
 		return nil, err
 	}
+	result = make([]*v1.Module, 0, len(objs))
 	for _, obj := range objs {
 		result = append(result, obj.(*v1.Module))
 	}
 	return result, nil
+}
+
+type ModuleStatusHandler func(obj *v1.Module, status v1.ModuleStatus) (v1.ModuleStatus, error)
+
+type ModuleGeneratingHandler func(obj *v1.Module, status v1.ModuleStatus) ([]runtime.Object, v1.ModuleStatus, error)
+
+func RegisterModuleStatusHandler(ctx context.Context, controller ModuleController, condition condition.Cond, name string, handler ModuleStatusHandler) {
+	statusHandler := &moduleStatusHandler{
+		client:    controller,
+		condition: condition,
+		handler:   handler,
+	}
+	controller.AddGenericHandler(ctx, name, FromModuleHandlerToHandler(statusHandler.sync))
+}
+
+func RegisterModuleGeneratingHandler(ctx context.Context, controller ModuleController, apply apply.Apply,
+	condition condition.Cond, name string, handler ModuleGeneratingHandler, opts *generic.GeneratingHandlerOptions) {
+	statusHandler := &moduleGeneratingHandler{
+		ModuleGeneratingHandler: handler,
+		apply:                   apply,
+		name:                    name,
+		gvk:                     controller.GroupVersionKind(),
+	}
+	if opts != nil {
+		statusHandler.opts = *opts
+	}
+	controller.OnChange(ctx, name, statusHandler.Remove)
+	RegisterModuleStatusHandler(ctx, controller, condition, name, statusHandler.Handle)
+}
+
+type moduleStatusHandler struct {
+	client    ModuleClient
+	condition condition.Cond
+	handler   ModuleStatusHandler
+}
+
+func (a *moduleStatusHandler) sync(key string, obj *v1.Module) (*v1.Module, error) {
+	if obj == nil {
+		return obj, nil
+	}
+
+	origStatus := obj.Status.DeepCopy()
+	obj = obj.DeepCopy()
+	newStatus, err := a.handler(obj, obj.Status)
+	if err != nil {
+		// Revert to old status on error
+		newStatus = *origStatus.DeepCopy()
+	}
+
+	if a.condition != "" {
+		if errors.IsConflict(err) {
+			a.condition.SetError(&newStatus, "", nil)
+		} else {
+			a.condition.SetError(&newStatus, "", err)
+		}
+	}
+	if !equality.Semantic.DeepEqual(origStatus, &newStatus) {
+		if a.condition != "" {
+			// Since status has changed, update the lastUpdatedTime
+			a.condition.LastUpdated(&newStatus, time.Now().UTC().Format(time.RFC3339))
+		}
+
+		var newErr error
+		obj.Status = newStatus
+		newObj, newErr := a.client.UpdateStatus(obj)
+		if err == nil {
+			err = newErr
+		}
+		if newErr == nil {
+			obj = newObj
+		}
+	}
+	return obj, err
+}
+
+type moduleGeneratingHandler struct {
+	ModuleGeneratingHandler
+	apply apply.Apply
+	opts  generic.GeneratingHandlerOptions
+	gvk   schema.GroupVersionKind
+	name  string
+}
+
+func (a *moduleGeneratingHandler) Remove(key string, obj *v1.Module) (*v1.Module, error) {
+	if obj != nil {
+		return obj, nil
+	}
+
+	obj = &v1.Module{}
+	obj.Namespace, obj.Name = kv.RSplit(key, "/")
+	obj.SetGroupVersionKind(a.gvk)
+
+	return nil, generic.ConfigureApplyForObject(a.apply, obj, &a.opts).
+		WithOwner(obj).
+		WithSetID(a.name).
+		ApplyObjects()
+}
+
+func (a *moduleGeneratingHandler) Handle(obj *v1.Module, status v1.ModuleStatus) (v1.ModuleStatus, error) {
+	objs, newStatus, err := a.ModuleGeneratingHandler(obj, status)
+	if err != nil {
+		return newStatus, err
+	}
+
+	return newStatus, generic.ConfigureApplyForObject(a.apply, obj, &a.opts).
+		WithOwner(obj).
+		WithSetID(a.name).
+		ApplyObjects(objs...)
 }

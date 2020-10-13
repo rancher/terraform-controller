@@ -14,37 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package generators has the generators for the client-gen utility.
 package generators
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
-	"github.com/matryer/moq/pkg/moq"
-	"github.com/pkg/errors"
 	args2 "github.com/rancher/wrangler/pkg/controller-gen/args"
-	"golang.org/x/tools/imports"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/gengo/args"
 	"k8s.io/gengo/generator"
 	"k8s.io/gengo/types"
-)
-
-var (
-	underscoreRegexp = regexp.MustCompile(`([a-z])([A-Z])`)
-	goImportOpts     = &imports.Options{
-		TabWidth:  8,
-		TabIndent: true,
-		Comments:  true,
-		Fragment:  true,
-	}
 )
 
 type ClientGenerator struct {
@@ -89,7 +70,7 @@ func (cg *ClientGenerator) Packages(context *generator.Context, arguments *args.
 		}
 	}
 
-	return generator.Packages(packageList)
+	return packageList
 }
 
 func (cg *ClientGenerator) typesGroupPackage(name *types.Name, gv schema.GroupVersion, generatorArgs *args.GeneratorArgs, customArgs *args2.CustomArgs) generator.Package {
@@ -133,7 +114,7 @@ func (cg *ClientGenerator) typesGroupVersionPackage(name *types.Name, gv schema.
 }
 
 func (cg *ClientGenerator) groupPackage(group string, generatorArgs *args.GeneratorArgs, customArgs *args2.CustomArgs) generator.Package {
-	packagePath := filepath.Join(customArgs.Package, "controllers", groupPackageName(group, ""))
+	packagePath := filepath.Join(customArgs.Package, "controllers", groupPackageName(group, customArgs.Options.Groups[group].OutputControllerPackageName))
 	return Package(generatorArgs, packagePath, func(context *generator.Context) []generator.Generator {
 		return []generator.Generator{
 			FactoryGo(group, generatorArgs, customArgs),
@@ -143,7 +124,7 @@ func (cg *ClientGenerator) groupPackage(group string, generatorArgs *args.Genera
 }
 
 func (cg *ClientGenerator) groupVersionPackage(gv schema.GroupVersion, generatorArgs *args.GeneratorArgs, customArgs *args2.CustomArgs) generator.Package {
-	packagePath := filepath.Join(customArgs.Package, "controllers", groupPackageName(gv.Group, ""), gv.Version)
+	packagePath := filepath.Join(customArgs.Package, "controllers", groupPackageName(gv.Group, customArgs.Options.Groups[gv.Group].OutputControllerPackageName), gv.Version)
 
 	return Package(generatorArgs, packagePath, func(context *generator.Context) []generator.Generator {
 		generators := []generator.Generator{
@@ -157,87 +138,4 @@ func (cg *ClientGenerator) groupVersionPackage(gv schema.GroupVersion, generator
 
 		return generators
 	})
-}
-
-func removePackage(pkg string) string {
-	pkgSplit := strings.Split(pkg, string(os.PathSeparator))
-	return strings.Join(pkgSplit[3:], string(os.PathSeparator))
-}
-
-func (cg *ClientGenerator) GenerateMocks() error {
-	base := args.DefaultSourceTree()
-
-	for packagePath, resources := range cg.Fakes {
-		if base == "./" {
-			packagePath = removePackage(packagePath)
-		}
-		genPath := path.Join(base, packagePath)
-
-		// Clean the fakes dir
-		err := cleanMockDir(genPath)
-		if err != nil {
-			return err
-		}
-
-		m, err := moq.New(genPath, "fakes")
-		if err != nil {
-			return err
-		}
-
-		for _, resource := range resources {
-			var out bytes.Buffer
-
-			interfaces := []string{
-				resource + "Controller",
-				resource + "Client",
-				resource + "Cache",
-			}
-
-			err = m.Mock(&out, interfaces...)
-			if err != nil {
-				return err
-			}
-
-			filePath := path.Join(genPath, "fakes", "zz_generated_"+addUnderscore(resource)+"_mock.go")
-
-			// format imports - moq only uses gofmt which does not do imports
-			res, err := imports.Process(filePath, out.Bytes(), goImportOpts)
-			if err != nil {
-				return err
-			}
-
-			// create the file
-			err = ioutil.WriteFile(filePath, res, 0644)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func addUnderscore(input string) string {
-	return strings.ToLower(underscoreRegexp.ReplaceAllString(input, `${1}_${2}`))
-}
-
-func cleanMockDir(dir string) error {
-	dir = path.Join(dir, "fakes")
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		// if the directory doesn't exist there is nothing to do
-		if !os.IsNotExist(err) {
-			return err
-		}
-		return nil
-	}
-
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), "_mock.go") || strings.HasSuffix(file.Name(), "_mock_test.go") {
-			if err := os.Remove(path.Join(dir, file.Name())); err != nil {
-				return errors.Wrapf(err, "failed to delete %s", path.Join(dir, file.Name()))
-			}
-		}
-	}
-
-	return nil
 }

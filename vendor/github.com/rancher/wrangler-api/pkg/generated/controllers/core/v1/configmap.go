@@ -20,10 +20,14 @@ package v1
 
 import (
 	"context"
+	"time"
 
+	"github.com/rancher/lasso/pkg/client"
+	"github.com/rancher/lasso/pkg/controller"
 	"github.com/rancher/wrangler/pkg/generic"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,29 +35,21 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/watch"
-	informers "k8s.io/client-go/informers/core/v1"
-	clientset "k8s.io/client-go/kubernetes/typed/core/v1"
-	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 type ConfigMapHandler func(string, *v1.ConfigMap) (*v1.ConfigMap, error)
 
 type ConfigMapController interface {
+	generic.ControllerMeta
 	ConfigMapClient
 
 	OnChange(ctx context.Context, name string, sync ConfigMapHandler)
 	OnRemove(ctx context.Context, name string, sync ConfigMapHandler)
 	Enqueue(namespace, name string)
+	EnqueueAfter(namespace, name string, duration time.Duration)
 
 	Cache() ConfigMapCache
-
-	Informer() cache.SharedIndexInformer
-	GroupVersionKind() schema.GroupVersionKind
-
-	AddGenericHandler(ctx context.Context, name string, handler generic.Handler)
-	AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler)
-	Updater() generic.Updater
 }
 
 type ConfigMapClient interface {
@@ -78,18 +74,22 @@ type ConfigMapCache interface {
 type ConfigMapIndexer func(obj *v1.ConfigMap) ([]string, error)
 
 type configMapController struct {
-	controllerManager *generic.ControllerManager
-	clientGetter      clientset.ConfigMapsGetter
-	informer          informers.ConfigMapInformer
-	gvk               schema.GroupVersionKind
+	controller    controller.SharedController
+	client        *client.Client
+	gvk           schema.GroupVersionKind
+	groupResource schema.GroupResource
 }
 
-func NewConfigMapController(gvk schema.GroupVersionKind, controllerManager *generic.ControllerManager, clientGetter clientset.ConfigMapsGetter, informer informers.ConfigMapInformer) ConfigMapController {
+func NewConfigMapController(gvk schema.GroupVersionKind, resource string, namespaced bool, controller controller.SharedControllerFactory) ConfigMapController {
+	c := controller.ForResourceKind(gvk.GroupVersion().WithResource(resource), gvk.Kind, namespaced)
 	return &configMapController{
-		controllerManager: controllerManager,
-		clientGetter:      clientGetter,
-		informer:          informer,
-		gvk:               gvk,
+		controller: c,
+		client:     c.Client(),
+		gvk:        gvk,
+		groupResource: schema.GroupResource{
+			Group:    gvk.Group,
+			Resource: resource,
+		},
 	}
 }
 
@@ -118,35 +118,29 @@ func (c *configMapController) Updater() generic.Updater {
 	}
 }
 
-func UpdateConfigMapOnChange(updater generic.Updater, handler ConfigMapHandler) ConfigMapHandler {
-	return func(key string, obj *v1.ConfigMap) (*v1.ConfigMap, error) {
-		if obj == nil {
-			return handler(key, nil)
-		}
-
-		copyObj := obj.DeepCopy()
-		newObj, err := handler(key, copyObj)
-		if newObj != nil {
-			copyObj = newObj
-		}
-		if obj.ResourceVersion == copyObj.ResourceVersion && !equality.Semantic.DeepEqual(obj, copyObj) {
-			newObj, err := updater(copyObj)
-			if newObj != nil && err == nil {
-				copyObj = newObj.(*v1.ConfigMap)
-			}
-		}
-
-		return copyObj, err
+func UpdateConfigMapDeepCopyOnChange(client ConfigMapClient, obj *v1.ConfigMap, handler func(obj *v1.ConfigMap) (*v1.ConfigMap, error)) (*v1.ConfigMap, error) {
+	if obj == nil {
+		return obj, nil
 	}
+
+	copyObj := obj.DeepCopy()
+	newObj, err := handler(copyObj)
+	if newObj != nil {
+		copyObj = newObj
+	}
+	if obj.ResourceVersion == copyObj.ResourceVersion && !equality.Semantic.DeepEqual(obj, copyObj) {
+		return client.Update(copyObj)
+	}
+
+	return copyObj, err
 }
 
 func (c *configMapController) AddGenericHandler(ctx context.Context, name string, handler generic.Handler) {
-	c.controllerManager.AddHandler(ctx, c.gvk, c.informer.Informer(), name, handler)
+	c.controller.RegisterHandler(ctx, name, controller.SharedControllerHandlerFunc(handler))
 }
 
 func (c *configMapController) AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler) {
-	removeHandler := generic.NewRemoveHandler(name, c.Updater(), handler)
-	c.controllerManager.AddHandler(ctx, c.gvk, c.informer.Informer(), name, removeHandler)
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), handler))
 }
 
 func (c *configMapController) OnChange(ctx context.Context, name string, sync ConfigMapHandler) {
@@ -154,16 +148,19 @@ func (c *configMapController) OnChange(ctx context.Context, name string, sync Co
 }
 
 func (c *configMapController) OnRemove(ctx context.Context, name string, sync ConfigMapHandler) {
-	removeHandler := generic.NewRemoveHandler(name, c.Updater(), FromConfigMapHandlerToHandler(sync))
-	c.AddGenericHandler(ctx, name, removeHandler)
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), FromConfigMapHandlerToHandler(sync)))
 }
 
 func (c *configMapController) Enqueue(namespace, name string) {
-	c.controllerManager.Enqueue(c.gvk, c.informer.Informer(), namespace, name)
+	c.controller.Enqueue(namespace, name)
+}
+
+func (c *configMapController) EnqueueAfter(namespace, name string, duration time.Duration) {
+	c.controller.EnqueueAfter(namespace, name, duration)
 }
 
 func (c *configMapController) Informer() cache.SharedIndexInformer {
-	return c.informer.Informer()
+	return c.controller.Informer()
 }
 
 func (c *configMapController) GroupVersionKind() schema.GroupVersionKind {
@@ -172,50 +169,70 @@ func (c *configMapController) GroupVersionKind() schema.GroupVersionKind {
 
 func (c *configMapController) Cache() ConfigMapCache {
 	return &configMapCache{
-		lister:  c.informer.Lister(),
-		indexer: c.informer.Informer().GetIndexer(),
+		indexer:  c.Informer().GetIndexer(),
+		resource: c.groupResource,
 	}
 }
 
 func (c *configMapController) Create(obj *v1.ConfigMap) (*v1.ConfigMap, error) {
-	return c.clientGetter.ConfigMaps(obj.Namespace).Create(obj)
+	result := &v1.ConfigMap{}
+	return result, c.client.Create(context.TODO(), obj.Namespace, obj, result, metav1.CreateOptions{})
 }
 
 func (c *configMapController) Update(obj *v1.ConfigMap) (*v1.ConfigMap, error) {
-	return c.clientGetter.ConfigMaps(obj.Namespace).Update(obj)
+	result := &v1.ConfigMap{}
+	return result, c.client.Update(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
 func (c *configMapController) Delete(namespace, name string, options *metav1.DeleteOptions) error {
-	return c.clientGetter.ConfigMaps(namespace).Delete(name, options)
+	if options == nil {
+		options = &metav1.DeleteOptions{}
+	}
+	return c.client.Delete(context.TODO(), namespace, name, *options)
 }
 
 func (c *configMapController) Get(namespace, name string, options metav1.GetOptions) (*v1.ConfigMap, error) {
-	return c.clientGetter.ConfigMaps(namespace).Get(name, options)
+	result := &v1.ConfigMap{}
+	return result, c.client.Get(context.TODO(), namespace, name, result, options)
 }
 
 func (c *configMapController) List(namespace string, opts metav1.ListOptions) (*v1.ConfigMapList, error) {
-	return c.clientGetter.ConfigMaps(namespace).List(opts)
+	result := &v1.ConfigMapList{}
+	return result, c.client.List(context.TODO(), namespace, result, opts)
 }
 
 func (c *configMapController) Watch(namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientGetter.ConfigMaps(namespace).Watch(opts)
+	return c.client.Watch(context.TODO(), namespace, opts)
 }
 
-func (c *configMapController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.ConfigMap, err error) {
-	return c.clientGetter.ConfigMaps(namespace).Patch(name, pt, data, subresources...)
+func (c *configMapController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (*v1.ConfigMap, error) {
+	result := &v1.ConfigMap{}
+	return result, c.client.Patch(context.TODO(), namespace, name, pt, data, result, metav1.PatchOptions{}, subresources...)
 }
 
 type configMapCache struct {
-	lister  listers.ConfigMapLister
-	indexer cache.Indexer
+	indexer  cache.Indexer
+	resource schema.GroupResource
 }
 
 func (c *configMapCache) Get(namespace, name string) (*v1.ConfigMap, error) {
-	return c.lister.ConfigMaps(namespace).Get(name)
+	obj, exists, err := c.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(c.resource, name)
+	}
+	return obj.(*v1.ConfigMap), nil
 }
 
-func (c *configMapCache) List(namespace string, selector labels.Selector) ([]*v1.ConfigMap, error) {
-	return c.lister.ConfigMaps(namespace).List(selector)
+func (c *configMapCache) List(namespace string, selector labels.Selector) (ret []*v1.ConfigMap, err error) {
+
+	err = cache.ListAllByNamespace(c.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.ConfigMap))
+	})
+
+	return ret, err
 }
 
 func (c *configMapCache) AddIndexer(indexName string, indexer ConfigMapIndexer) {
@@ -231,6 +248,7 @@ func (c *configMapCache) GetByIndex(indexName, key string) (result []*v1.ConfigM
 	if err != nil {
 		return nil, err
 	}
+	result = make([]*v1.ConfigMap, 0, len(objs))
 	for _, obj := range objs {
 		result = append(result, obj.(*v1.ConfigMap))
 	}

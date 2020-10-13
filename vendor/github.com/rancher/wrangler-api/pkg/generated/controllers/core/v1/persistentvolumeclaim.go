@@ -20,10 +20,17 @@ package v1
 
 import (
 	"context"
+	"time"
 
+	"github.com/rancher/lasso/pkg/client"
+	"github.com/rancher/lasso/pkg/controller"
+	"github.com/rancher/wrangler/pkg/apply"
+	"github.com/rancher/wrangler/pkg/condition"
 	"github.com/rancher/wrangler/pkg/generic"
+	"github.com/rancher/wrangler/pkg/kv"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,29 +38,21 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/watch"
-	informers "k8s.io/client-go/informers/core/v1"
-	clientset "k8s.io/client-go/kubernetes/typed/core/v1"
-	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 type PersistentVolumeClaimHandler func(string, *v1.PersistentVolumeClaim) (*v1.PersistentVolumeClaim, error)
 
 type PersistentVolumeClaimController interface {
+	generic.ControllerMeta
 	PersistentVolumeClaimClient
 
 	OnChange(ctx context.Context, name string, sync PersistentVolumeClaimHandler)
 	OnRemove(ctx context.Context, name string, sync PersistentVolumeClaimHandler)
 	Enqueue(namespace, name string)
+	EnqueueAfter(namespace, name string, duration time.Duration)
 
 	Cache() PersistentVolumeClaimCache
-
-	Informer() cache.SharedIndexInformer
-	GroupVersionKind() schema.GroupVersionKind
-
-	AddGenericHandler(ctx context.Context, name string, handler generic.Handler)
-	AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler)
-	Updater() generic.Updater
 }
 
 type PersistentVolumeClaimClient interface {
@@ -78,18 +77,22 @@ type PersistentVolumeClaimCache interface {
 type PersistentVolumeClaimIndexer func(obj *v1.PersistentVolumeClaim) ([]string, error)
 
 type persistentVolumeClaimController struct {
-	controllerManager *generic.ControllerManager
-	clientGetter      clientset.PersistentVolumeClaimsGetter
-	informer          informers.PersistentVolumeClaimInformer
-	gvk               schema.GroupVersionKind
+	controller    controller.SharedController
+	client        *client.Client
+	gvk           schema.GroupVersionKind
+	groupResource schema.GroupResource
 }
 
-func NewPersistentVolumeClaimController(gvk schema.GroupVersionKind, controllerManager *generic.ControllerManager, clientGetter clientset.PersistentVolumeClaimsGetter, informer informers.PersistentVolumeClaimInformer) PersistentVolumeClaimController {
+func NewPersistentVolumeClaimController(gvk schema.GroupVersionKind, resource string, namespaced bool, controller controller.SharedControllerFactory) PersistentVolumeClaimController {
+	c := controller.ForResourceKind(gvk.GroupVersion().WithResource(resource), gvk.Kind, namespaced)
 	return &persistentVolumeClaimController{
-		controllerManager: controllerManager,
-		clientGetter:      clientGetter,
-		informer:          informer,
-		gvk:               gvk,
+		controller: c,
+		client:     c.Client(),
+		gvk:        gvk,
+		groupResource: schema.GroupResource{
+			Group:    gvk.Group,
+			Resource: resource,
+		},
 	}
 }
 
@@ -118,35 +121,29 @@ func (c *persistentVolumeClaimController) Updater() generic.Updater {
 	}
 }
 
-func UpdatePersistentVolumeClaimOnChange(updater generic.Updater, handler PersistentVolumeClaimHandler) PersistentVolumeClaimHandler {
-	return func(key string, obj *v1.PersistentVolumeClaim) (*v1.PersistentVolumeClaim, error) {
-		if obj == nil {
-			return handler(key, nil)
-		}
-
-		copyObj := obj.DeepCopy()
-		newObj, err := handler(key, copyObj)
-		if newObj != nil {
-			copyObj = newObj
-		}
-		if obj.ResourceVersion == copyObj.ResourceVersion && !equality.Semantic.DeepEqual(obj, copyObj) {
-			newObj, err := updater(copyObj)
-			if newObj != nil && err == nil {
-				copyObj = newObj.(*v1.PersistentVolumeClaim)
-			}
-		}
-
-		return copyObj, err
+func UpdatePersistentVolumeClaimDeepCopyOnChange(client PersistentVolumeClaimClient, obj *v1.PersistentVolumeClaim, handler func(obj *v1.PersistentVolumeClaim) (*v1.PersistentVolumeClaim, error)) (*v1.PersistentVolumeClaim, error) {
+	if obj == nil {
+		return obj, nil
 	}
+
+	copyObj := obj.DeepCopy()
+	newObj, err := handler(copyObj)
+	if newObj != nil {
+		copyObj = newObj
+	}
+	if obj.ResourceVersion == copyObj.ResourceVersion && !equality.Semantic.DeepEqual(obj, copyObj) {
+		return client.Update(copyObj)
+	}
+
+	return copyObj, err
 }
 
 func (c *persistentVolumeClaimController) AddGenericHandler(ctx context.Context, name string, handler generic.Handler) {
-	c.controllerManager.AddHandler(ctx, c.gvk, c.informer.Informer(), name, handler)
+	c.controller.RegisterHandler(ctx, name, controller.SharedControllerHandlerFunc(handler))
 }
 
 func (c *persistentVolumeClaimController) AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler) {
-	removeHandler := generic.NewRemoveHandler(name, c.Updater(), handler)
-	c.controllerManager.AddHandler(ctx, c.gvk, c.informer.Informer(), name, removeHandler)
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), handler))
 }
 
 func (c *persistentVolumeClaimController) OnChange(ctx context.Context, name string, sync PersistentVolumeClaimHandler) {
@@ -154,16 +151,19 @@ func (c *persistentVolumeClaimController) OnChange(ctx context.Context, name str
 }
 
 func (c *persistentVolumeClaimController) OnRemove(ctx context.Context, name string, sync PersistentVolumeClaimHandler) {
-	removeHandler := generic.NewRemoveHandler(name, c.Updater(), FromPersistentVolumeClaimHandlerToHandler(sync))
-	c.AddGenericHandler(ctx, name, removeHandler)
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), FromPersistentVolumeClaimHandlerToHandler(sync)))
 }
 
 func (c *persistentVolumeClaimController) Enqueue(namespace, name string) {
-	c.controllerManager.Enqueue(c.gvk, c.informer.Informer(), namespace, name)
+	c.controller.Enqueue(namespace, name)
+}
+
+func (c *persistentVolumeClaimController) EnqueueAfter(namespace, name string, duration time.Duration) {
+	c.controller.EnqueueAfter(namespace, name, duration)
 }
 
 func (c *persistentVolumeClaimController) Informer() cache.SharedIndexInformer {
-	return c.informer.Informer()
+	return c.controller.Informer()
 }
 
 func (c *persistentVolumeClaimController) GroupVersionKind() schema.GroupVersionKind {
@@ -172,54 +172,75 @@ func (c *persistentVolumeClaimController) GroupVersionKind() schema.GroupVersion
 
 func (c *persistentVolumeClaimController) Cache() PersistentVolumeClaimCache {
 	return &persistentVolumeClaimCache{
-		lister:  c.informer.Lister(),
-		indexer: c.informer.Informer().GetIndexer(),
+		indexer:  c.Informer().GetIndexer(),
+		resource: c.groupResource,
 	}
 }
 
 func (c *persistentVolumeClaimController) Create(obj *v1.PersistentVolumeClaim) (*v1.PersistentVolumeClaim, error) {
-	return c.clientGetter.PersistentVolumeClaims(obj.Namespace).Create(obj)
+	result := &v1.PersistentVolumeClaim{}
+	return result, c.client.Create(context.TODO(), obj.Namespace, obj, result, metav1.CreateOptions{})
 }
 
 func (c *persistentVolumeClaimController) Update(obj *v1.PersistentVolumeClaim) (*v1.PersistentVolumeClaim, error) {
-	return c.clientGetter.PersistentVolumeClaims(obj.Namespace).Update(obj)
+	result := &v1.PersistentVolumeClaim{}
+	return result, c.client.Update(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
 func (c *persistentVolumeClaimController) UpdateStatus(obj *v1.PersistentVolumeClaim) (*v1.PersistentVolumeClaim, error) {
-	return c.clientGetter.PersistentVolumeClaims(obj.Namespace).UpdateStatus(obj)
+	result := &v1.PersistentVolumeClaim{}
+	return result, c.client.UpdateStatus(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
 func (c *persistentVolumeClaimController) Delete(namespace, name string, options *metav1.DeleteOptions) error {
-	return c.clientGetter.PersistentVolumeClaims(namespace).Delete(name, options)
+	if options == nil {
+		options = &metav1.DeleteOptions{}
+	}
+	return c.client.Delete(context.TODO(), namespace, name, *options)
 }
 
 func (c *persistentVolumeClaimController) Get(namespace, name string, options metav1.GetOptions) (*v1.PersistentVolumeClaim, error) {
-	return c.clientGetter.PersistentVolumeClaims(namespace).Get(name, options)
+	result := &v1.PersistentVolumeClaim{}
+	return result, c.client.Get(context.TODO(), namespace, name, result, options)
 }
 
 func (c *persistentVolumeClaimController) List(namespace string, opts metav1.ListOptions) (*v1.PersistentVolumeClaimList, error) {
-	return c.clientGetter.PersistentVolumeClaims(namespace).List(opts)
+	result := &v1.PersistentVolumeClaimList{}
+	return result, c.client.List(context.TODO(), namespace, result, opts)
 }
 
 func (c *persistentVolumeClaimController) Watch(namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientGetter.PersistentVolumeClaims(namespace).Watch(opts)
+	return c.client.Watch(context.TODO(), namespace, opts)
 }
 
-func (c *persistentVolumeClaimController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.PersistentVolumeClaim, err error) {
-	return c.clientGetter.PersistentVolumeClaims(namespace).Patch(name, pt, data, subresources...)
+func (c *persistentVolumeClaimController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (*v1.PersistentVolumeClaim, error) {
+	result := &v1.PersistentVolumeClaim{}
+	return result, c.client.Patch(context.TODO(), namespace, name, pt, data, result, metav1.PatchOptions{}, subresources...)
 }
 
 type persistentVolumeClaimCache struct {
-	lister  listers.PersistentVolumeClaimLister
-	indexer cache.Indexer
+	indexer  cache.Indexer
+	resource schema.GroupResource
 }
 
 func (c *persistentVolumeClaimCache) Get(namespace, name string) (*v1.PersistentVolumeClaim, error) {
-	return c.lister.PersistentVolumeClaims(namespace).Get(name)
+	obj, exists, err := c.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(c.resource, name)
+	}
+	return obj.(*v1.PersistentVolumeClaim), nil
 }
 
-func (c *persistentVolumeClaimCache) List(namespace string, selector labels.Selector) ([]*v1.PersistentVolumeClaim, error) {
-	return c.lister.PersistentVolumeClaims(namespace).List(selector)
+func (c *persistentVolumeClaimCache) List(namespace string, selector labels.Selector) (ret []*v1.PersistentVolumeClaim, err error) {
+
+	err = cache.ListAllByNamespace(c.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.PersistentVolumeClaim))
+	})
+
+	return ret, err
 }
 
 func (c *persistentVolumeClaimCache) AddIndexer(indexName string, indexer PersistentVolumeClaimIndexer) {
@@ -235,8 +256,109 @@ func (c *persistentVolumeClaimCache) GetByIndex(indexName, key string) (result [
 	if err != nil {
 		return nil, err
 	}
+	result = make([]*v1.PersistentVolumeClaim, 0, len(objs))
 	for _, obj := range objs {
 		result = append(result, obj.(*v1.PersistentVolumeClaim))
 	}
 	return result, nil
+}
+
+type PersistentVolumeClaimStatusHandler func(obj *v1.PersistentVolumeClaim, status v1.PersistentVolumeClaimStatus) (v1.PersistentVolumeClaimStatus, error)
+
+type PersistentVolumeClaimGeneratingHandler func(obj *v1.PersistentVolumeClaim, status v1.PersistentVolumeClaimStatus) ([]runtime.Object, v1.PersistentVolumeClaimStatus, error)
+
+func RegisterPersistentVolumeClaimStatusHandler(ctx context.Context, controller PersistentVolumeClaimController, condition condition.Cond, name string, handler PersistentVolumeClaimStatusHandler) {
+	statusHandler := &persistentVolumeClaimStatusHandler{
+		client:    controller,
+		condition: condition,
+		handler:   handler,
+	}
+	controller.AddGenericHandler(ctx, name, FromPersistentVolumeClaimHandlerToHandler(statusHandler.sync))
+}
+
+func RegisterPersistentVolumeClaimGeneratingHandler(ctx context.Context, controller PersistentVolumeClaimController, apply apply.Apply,
+	condition condition.Cond, name string, handler PersistentVolumeClaimGeneratingHandler, opts *generic.GeneratingHandlerOptions) {
+	statusHandler := &persistentVolumeClaimGeneratingHandler{
+		PersistentVolumeClaimGeneratingHandler: handler,
+		apply:                                  apply,
+		name:                                   name,
+		gvk:                                    controller.GroupVersionKind(),
+	}
+	if opts != nil {
+		statusHandler.opts = *opts
+	}
+	controller.OnChange(ctx, name, statusHandler.Remove)
+	RegisterPersistentVolumeClaimStatusHandler(ctx, controller, condition, name, statusHandler.Handle)
+}
+
+type persistentVolumeClaimStatusHandler struct {
+	client    PersistentVolumeClaimClient
+	condition condition.Cond
+	handler   PersistentVolumeClaimStatusHandler
+}
+
+func (a *persistentVolumeClaimStatusHandler) sync(key string, obj *v1.PersistentVolumeClaim) (*v1.PersistentVolumeClaim, error) {
+	if obj == nil {
+		return obj, nil
+	}
+
+	origStatus := obj.Status.DeepCopy()
+	obj = obj.DeepCopy()
+	newStatus, err := a.handler(obj, obj.Status)
+	if err != nil {
+		// Revert to old status on error
+		newStatus = *origStatus.DeepCopy()
+	}
+
+	if a.condition != "" {
+		if errors.IsConflict(err) {
+			a.condition.SetError(&newStatus, "", nil)
+		} else {
+			a.condition.SetError(&newStatus, "", err)
+		}
+	}
+	if !equality.Semantic.DeepEqual(origStatus, &newStatus) {
+		var newErr error
+		obj.Status = newStatus
+		obj, newErr = a.client.UpdateStatus(obj)
+		if err == nil {
+			err = newErr
+		}
+	}
+	return obj, err
+}
+
+type persistentVolumeClaimGeneratingHandler struct {
+	PersistentVolumeClaimGeneratingHandler
+	apply apply.Apply
+	opts  generic.GeneratingHandlerOptions
+	gvk   schema.GroupVersionKind
+	name  string
+}
+
+func (a *persistentVolumeClaimGeneratingHandler) Remove(key string, obj *v1.PersistentVolumeClaim) (*v1.PersistentVolumeClaim, error) {
+	if obj != nil {
+		return obj, nil
+	}
+
+	obj = &v1.PersistentVolumeClaim{}
+	obj.Namespace, obj.Name = kv.RSplit(key, "/")
+	obj.SetGroupVersionKind(a.gvk)
+
+	return nil, generic.ConfigureApplyForObject(a.apply, obj, &a.opts).
+		WithOwner(obj).
+		WithSetID(a.name).
+		ApplyObjects()
+}
+
+func (a *persistentVolumeClaimGeneratingHandler) Handle(obj *v1.PersistentVolumeClaim, status v1.PersistentVolumeClaimStatus) (v1.PersistentVolumeClaimStatus, error) {
+	objs, newStatus, err := a.PersistentVolumeClaimGeneratingHandler(obj, status)
+	if err != nil {
+		return newStatus, err
+	}
+
+	return newStatus, generic.ConfigureApplyForObject(a.apply, obj, &a.opts).
+		WithOwner(obj).
+		WithSetID(a.name).
+		ApplyObjects(objs...)
 }

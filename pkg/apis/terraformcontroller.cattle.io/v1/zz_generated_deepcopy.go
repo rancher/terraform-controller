@@ -57,7 +57,7 @@ func (in *Execution) DeepCopyObject() runtime.Object {
 func (in *ExecutionList) DeepCopyInto(out *ExecutionList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Execution, len(*in))
@@ -203,7 +203,7 @@ func (in *ModuleContent) DeepCopy() *ModuleContent {
 func (in *ModuleList) DeepCopyInto(out *ModuleList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Module, len(*in))
@@ -309,7 +309,7 @@ func (in *State) DeepCopyObject() runtime.Object {
 func (in *StateList) DeepCopyInto(out *StateList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]State, len(*in))
