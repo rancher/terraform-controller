@@ -68,7 +68,7 @@ Run `kubectl create -f ./example -n terraform-controller` to create all envvars/
 Delete the droplet by deleting the CRD `kubectl delete -f ./example/20-deployment.yaml -n terraform-controller`. 
 
 ## Approving a Plan
-In `./example/20-execution.yaml` its pre-configured to auto-approve and auto-delete when you make the execution CRD. You can turn off `spec.destroyOnDelete` and `spec.autoConfirm` and do these by hand doing the following.
+In `./example/20-state.yaml` its pre-configured to auto-approve and auto-delete when you make the execution CRD. You can turn off `spec.destroyOnDelete` and `spec.autoConfirm` and do these by hand doing the following.
 
 To get the plan check logs of the pods used to run the job.
 `kubectl logs [executer-pod-name] -n terraform-controller`
