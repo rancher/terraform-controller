@@ -173,12 +173,12 @@ func TestTerraState(t *testing.T) {
 	assert := assert.New(t)
 
 	ts, err := e.cs.CoreV1().Secrets(e.namespace).List(v13.ListOptions{
-		LabelSelector: "terraKey=" + e.generateStateName(),
+		LabelSelector: "tfstateSecretSuffix=" + e.generateStateName(),
 	})
 
 	assert.Nil(err)
 	assert.Equal(len(ts.Items), 1)
-	assert.NotEmpty(ts.Items[0].Data["terrastate"])
+	assert.NotEmpty(ts.Items[0].Data["tfstate"])
 	assert.Empty(ts.Items[0].Data["lockInfo"])
 }
 
