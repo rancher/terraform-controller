@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
@@ -37,15 +38,15 @@ type ExecutionsGetter interface {
 
 // ExecutionInterface has methods to work with Execution resources.
 type ExecutionInterface interface {
-	Create(*v1.Execution) (*v1.Execution, error)
-	Update(*v1.Execution) (*v1.Execution, error)
-	UpdateStatus(*v1.Execution) (*v1.Execution, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.Execution, error)
-	List(opts metav1.ListOptions) (*v1.ExecutionList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Execution, err error)
+	Create(ctx context.Context, execution *v1.Execution, opts metav1.CreateOptions) (*v1.Execution, error)
+	Update(ctx context.Context, execution *v1.Execution, opts metav1.UpdateOptions) (*v1.Execution, error)
+	UpdateStatus(ctx context.Context, execution *v1.Execution, opts metav1.UpdateOptions) (*v1.Execution, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.Execution, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.ExecutionList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Execution, err error)
 	ExecutionExpansion
 }
 
@@ -64,20 +65,20 @@ func newExecutions(c *TerraformcontrollerV1Client, namespace string) *executions
 }
 
 // Get takes name of the execution, and returns the corresponding execution object, and an error if there is any.
-func (c *executions) Get(name string, options metav1.GetOptions) (result *v1.Execution, err error) {
+func (c *executions) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.Execution, err error) {
 	result = &v1.Execution{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("executions").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Executions that match those selectors.
-func (c *executions) List(opts metav1.ListOptions) (result *v1.ExecutionList, err error) {
+func (c *executions) List(ctx context.Context, opts metav1.ListOptions) (result *v1.ExecutionList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *executions) List(opts metav1.ListOptions) (result *v1.ExecutionList, er
 		Resource("executions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested executions.
-func (c *executions) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *executions) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *executions) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("executions").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a execution and creates it.  Returns the server's representation of the execution, and an error, if there is any.
-func (c *executions) Create(execution *v1.Execution) (result *v1.Execution, err error) {
+func (c *executions) Create(ctx context.Context, execution *v1.Execution, opts metav1.CreateOptions) (result *v1.Execution, err error) {
 	result = &v1.Execution{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("executions").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(execution).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a execution and updates it. Returns the server's representation of the execution, and an error, if there is any.
-func (c *executions) Update(execution *v1.Execution) (result *v1.Execution, err error) {
+func (c *executions) Update(ctx context.Context, execution *v1.Execution, opts metav1.UpdateOptions) (result *v1.Execution, err error) {
 	result = &v1.Execution{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("executions").
 		Name(execution.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(execution).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *executions) UpdateStatus(execution *v1.Execution) (result *v1.Execution, err error) {
+func (c *executions) UpdateStatus(ctx context.Context, execution *v1.Execution, opts metav1.UpdateOptions) (result *v1.Execution, err error) {
 	result = &v1.Execution{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("executions").
 		Name(execution.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(execution).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the execution and deletes it. Returns an error if one occurs.
-func (c *executions) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *executions) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("executions").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *executions) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *executions) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("executions").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched execution.
-func (c *executions) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Execution, err error) {
+func (c *executions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.Execution, err error) {
 	result = &v1.Execution{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("executions").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

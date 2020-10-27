@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
-	batchv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/batch/v1"
-	corev1 "github.com/rancher/wrangler-api/pkg/generated/controllers/core/v1"
-	rbacv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/rbac/v1"
+	batchv1 "github.com/rancher/wrangler/pkg/generated/controllers/batch/v1"
+	corev1 "github.com/rancher/wrangler/pkg/generated/controllers/core/v1"
+	rbacv1 "github.com/rancher/wrangler/pkg/generated/controllers/rbac/v1"
 	"github.com/sirupsen/logrus"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -77,8 +77,8 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 	}
 
 	if !ok {
-		v1.ExecutionConditionMissingInfo.SetStatus(obj, err.Error())
-		logrus.Debugf("missing info %v", err.Error())
+		v1.ExecutionConditionMissingInfo.SetStatusBool(obj, ok)
+		logrus.Debug("missing info")
 		return h.states.Update(obj)
 	}
 
@@ -151,7 +151,7 @@ func (h *handler) OnRemove(key string, obj *v1.State) (*v1.State, error) {
 		return obj, err
 	}
 	if !ok {
-		v1.ExecutionConditionMissingInfo.SetStatus(obj, err.Error())
+		v1.ExecutionConditionMissingInfo.SetStatusBool(obj, ok)
 		state, err := h.states.Update(obj)
 		if err != nil {
 			return state, err

@@ -20,7 +20,7 @@ func TestCrds(t *testing.T) {
 	assert.Nil(err)
 	for _, c := range e.crds {
 		crdName := fmt.Sprintf("%s.%s", lowerPlural(c.GVK.Kind), c.GVK.Group)
-		crd, err := cs.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
+		crd, err := cs.ApiextensionsV1beta1().CustomResourceDefinitions().Get(e.ctx, crdName, metav1.GetOptions{})
 		assert.Nil(err)
 		assert.Equal(crdName, crd.Name)
 	}

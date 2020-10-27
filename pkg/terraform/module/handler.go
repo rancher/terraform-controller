@@ -10,9 +10,8 @@ import (
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/git"
 	"github.com/rancher/terraform-controller/pkg/interval"
-	corev1 "github.com/rancher/wrangler-api/pkg/generated/controllers/core/v1"
+	corev1 "github.com/rancher/wrangler/pkg/generated/controllers/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func NewHandler(ctx context.Context, modules tfv1.ModuleController, secrets corev1.SecretController) *handler {
@@ -33,22 +32,21 @@ func (h *handler) OnChange(key string, module *v1.Module) (*v1.Module, error) {
 	if module == nil {
 		return nil, nil
 	}
+	if module.Spec.Git.IntervalSeconds == 0 {
+		module.Spec.Git.IntervalSeconds = int(interval.DefaultInterval / time.Second)
+	}
 
 	if isPolling(module.Spec) && needsUpdate(module) {
-		v1.ModuleConditionGitUpdated.False(module)
-		return tfv1.UpdateModuleOnChange(func(module runtime.Object) (runtime.Object, error) {
-			v1.ModuleConditionGitUpdated.True(module)
-			return h.modules.Update(module.(*v1.Module))
-		}, h.updateCommit)(key, module)
+		return h.updateCommit(key, module)
 	}
-	//
 	hash := computeHash(module)
 	if module.Status.ContentHash != hash {
 		return h.updateHash(module, hash)
 	}
 
+	h.modules.EnqueueAfter(module.Namespace, module.Name, time.Duration(module.Spec.Git.IntervalSeconds)*time.Second)
+
 	return h.modules.Update(module)
-	//return module, nil
 }
 
 func (h *handler) OnRemove(key string, module *v1.Module) (*v1.Module, error) {
@@ -85,9 +83,11 @@ func (h *handler) updateCommit(key string, module *v1.Module) (*v1.Module, error
 	gitChecked := module.Spec.Git
 	gitChecked.Commit = commit
 	module.Status.GitChecked = &gitChecked
-	module.Status.CheckTime = metav1.NewTime(time.Now())
+	module.Status.CheckTime = metav1.Now()
 
-	return module, nil
+	v1.ModuleConditionGitUpdated.True(module)
+
+	return h.modules.Update(module)
 }
 
 func (h *handler) getAuth(ns string, spec v1.ModuleSpec) (git.Auth, error) {

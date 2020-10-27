@@ -62,7 +62,7 @@ func TestCreateModule(t *testing.T) {
 
 	err = wait.Poll(time.Second, 15*time.Second, func() (bool, error) {
 		var err error
-		module, err := cs.Modules(e.namespace).Get(e.generateModuleName(), v13.GetOptions{})
+		module, err := cs.Modules(e.namespace).Get(e.ctx, e.generateModuleName(), v13.GetOptions{})
 
 		if err == nil && module.Status.ContentHash != "" {
 			return true, nil
@@ -98,7 +98,7 @@ func TestCreateState(t *testing.T) {
 
 	err = wait.Poll(time.Second, 15*time.Second, func() (bool, error) {
 		var err error
-		state, err := cs.States(e.namespace).Get(e.generateStateName(), v13.GetOptions{})
+		state, err := cs.States(e.namespace).Get(e.ctx, e.generateStateName(), v13.GetOptions{})
 
 		if err == nil && state.Status.LastRunHash != "" {
 			return true, nil
@@ -116,7 +116,7 @@ func TestCreateJobComplete(t *testing.T) {
 	var cm *v1.ConfigMap
 	err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
 		var err error
-		cm, err = e.cs.CoreV1().ConfigMaps(e.namespace).Get(TEST_CONFIG_MAP, v13.GetOptions{})
+		cm, err = e.cs.CoreV1().ConfigMaps(e.namespace).Get(e.ctx, TEST_CONFIG_MAP, v13.GetOptions{})
 		if err == nil {
 			return true, nil
 		}
@@ -141,7 +141,7 @@ func TestExecution(t *testing.T) {
 		logrus.Fatalf("Creating clientset for modules: %s", err.Error())
 	}
 
-	executions, err := cs.Executions(e.namespace).List(v13.ListOptions{
+	executions, err := cs.Executions(e.namespace).List(e.ctx, v13.ListOptions{
 		LabelSelector: "state=" + e.generateStateName(),
 	})
 
@@ -151,7 +151,7 @@ func TestExecution(t *testing.T) {
 	var jobDeleted = false
 	err = wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
 		var err error
-		_, err = e.cs.BatchV1().Jobs(e.namespace).Get("job-"+executions.Items[0].Name, v13.GetOptions{})
+		_, err = e.cs.BatchV1().Jobs(e.namespace).Get(e.ctx, "job-"+executions.Items[0].Name, v13.GetOptions{})
 		if errors.IsNotFound(err) {
 			jobDeleted = true
 			return true, nil
@@ -161,7 +161,7 @@ func TestExecution(t *testing.T) {
 	})
 
 	assert.Nil(err)
-	exec, err := cs.Executions(e.namespace).Get(executions.Items[0].Name, v13.GetOptions{})
+	exec, err := cs.Executions(e.namespace).Get(e.ctx, executions.Items[0].Name, v13.GetOptions{})
 	assert.Nil(err)
 	assert.True(jobDeleted)
 	assert.NotEmpty(exec.Status.JobLogs)
@@ -172,7 +172,7 @@ func TestExecution(t *testing.T) {
 func TestTerraState(t *testing.T) {
 	assert := assert.New(t)
 
-	ts, err := e.cs.CoreV1().Secrets(e.namespace).List(v13.ListOptions{
+	ts, err := e.cs.CoreV1().Secrets(e.namespace).List(e.ctx, v13.ListOptions{
 		LabelSelector: "tfstateSecretSuffix=" + e.generateStateName(),
 	})
 
@@ -187,7 +187,7 @@ func TestDeleteState(t *testing.T) {
 
 	cs, err := tf.NewForConfig(e.cfg)
 	assert.Nil(err)
-	err = cs.States(e.namespace).Delete(e.generateStateName(), &v13.DeleteOptions{})
+	err = cs.States(e.namespace).Delete(e.ctx, e.generateStateName(), v13.DeleteOptions{})
 	assert.Nil(err)
 }
 
@@ -196,7 +196,7 @@ func TestDeleteJobComplete(t *testing.T) {
 	var configMapDeleted = false
 	err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
 		var err error
-		_, err = e.cs.CoreV1().ConfigMaps(e.namespace).Get(TEST_CONFIG_MAP, v13.GetOptions{})
+		_, err = e.cs.CoreV1().ConfigMaps(e.namespace).Get(e.ctx, TEST_CONFIG_MAP, v13.GetOptions{})
 		if errors.IsNotFound(err) {
 			configMapDeleted = true
 			return true, nil

@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	terraformcontrollercattleiov1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var statesResource = schema.GroupVersionResource{Group: "terraformcontroller.cat
 var statesKind = schema.GroupVersionKind{Group: "terraformcontroller.cattle.io", Version: "v1", Kind: "State"}
 
 // Get takes name of the state, and returns the corresponding state object, and an error if there is any.
-func (c *FakeStates) Get(name string, options v1.GetOptions) (result *terraformcontrollercattleiov1.State, err error) {
+func (c *FakeStates) Get(ctx context.Context, name string, options v1.GetOptions) (result *terraformcontrollercattleiov1.State, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(statesResource, c.ns, name), &terraformcontrollercattleiov1.State{})
 
@@ -50,7 +52,7 @@ func (c *FakeStates) Get(name string, options v1.GetOptions) (result *terraformc
 }
 
 // List takes label and field selectors, and returns the list of States that match those selectors.
-func (c *FakeStates) List(opts v1.ListOptions) (result *terraformcontrollercattleiov1.StateList, err error) {
+func (c *FakeStates) List(ctx context.Context, opts v1.ListOptions) (result *terraformcontrollercattleiov1.StateList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(statesResource, statesKind, c.ns, opts), &terraformcontrollercattleiov1.StateList{})
 
@@ -72,14 +74,14 @@ func (c *FakeStates) List(opts v1.ListOptions) (result *terraformcontrollercattl
 }
 
 // Watch returns a watch.Interface that watches the requested states.
-func (c *FakeStates) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeStates) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(statesResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a state and creates it.  Returns the server's representation of the state, and an error, if there is any.
-func (c *FakeStates) Create(state *terraformcontrollercattleiov1.State) (result *terraformcontrollercattleiov1.State, err error) {
+func (c *FakeStates) Create(ctx context.Context, state *terraformcontrollercattleiov1.State, opts v1.CreateOptions) (result *terraformcontrollercattleiov1.State, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(statesResource, c.ns, state), &terraformcontrollercattleiov1.State{})
 
@@ -90,7 +92,7 @@ func (c *FakeStates) Create(state *terraformcontrollercattleiov1.State) (result 
 }
 
 // Update takes the representation of a state and updates it. Returns the server's representation of the state, and an error, if there is any.
-func (c *FakeStates) Update(state *terraformcontrollercattleiov1.State) (result *terraformcontrollercattleiov1.State, err error) {
+func (c *FakeStates) Update(ctx context.Context, state *terraformcontrollercattleiov1.State, opts v1.UpdateOptions) (result *terraformcontrollercattleiov1.State, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(statesResource, c.ns, state), &terraformcontrollercattleiov1.State{})
 
@@ -102,7 +104,7 @@ func (c *FakeStates) Update(state *terraformcontrollercattleiov1.State) (result 
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeStates) UpdateStatus(state *terraformcontrollercattleiov1.State) (*terraformcontrollercattleiov1.State, error) {
+func (c *FakeStates) UpdateStatus(ctx context.Context, state *terraformcontrollercattleiov1.State, opts v1.UpdateOptions) (*terraformcontrollercattleiov1.State, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(statesResource, "status", c.ns, state), &terraformcontrollercattleiov1.State{})
 
@@ -113,7 +115,7 @@ func (c *FakeStates) UpdateStatus(state *terraformcontrollercattleiov1.State) (*
 }
 
 // Delete takes name of the state and deletes it. Returns an error if one occurs.
-func (c *FakeStates) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeStates) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(statesResource, c.ns, name), &terraformcontrollercattleiov1.State{})
 
@@ -121,15 +123,15 @@ func (c *FakeStates) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeStates) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(statesResource, c.ns, listOptions)
+func (c *FakeStates) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(statesResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &terraformcontrollercattleiov1.StateList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched state.
-func (c *FakeStates) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *terraformcontrollercattleiov1.State, err error) {
+func (c *FakeStates) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *terraformcontrollercattleiov1.State, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(statesResource, c.ns, name, pt, data, subresources...), &terraformcontrollercattleiov1.State{})
 
