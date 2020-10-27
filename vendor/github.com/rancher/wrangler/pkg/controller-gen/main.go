@@ -1,6 +1,7 @@
 package controllergen
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -8,10 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"k8s.io/gengo/generator"
 
 	cgargs "github.com/rancher/wrangler/pkg/controller-gen/args"
 	"github.com/rancher/wrangler/pkg/controller-gen/generators"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	csargs "k8s.io/code-generator/cmd/client-gen/args"
 	clientgenerators "k8s.io/code-generator/cmd/client-gen/generators"
@@ -25,6 +27,10 @@ import (
 	"k8s.io/gengo/args"
 	dp "k8s.io/gengo/examples/deepcopy-gen/generators"
 	"k8s.io/gengo/types"
+)
+
+var (
+	t = true
 )
 
 func Run(opts cgargs.Options) {
@@ -53,7 +59,7 @@ func Run(opts cgargs.Options) {
 	clientGen := generators.NewClientGenerator()
 
 	if err := genericArgs.Execute(
-		clientgenerators.NameSystems(),
+		clientgenerators.NameSystems(nil),
 		clientgenerators.DefaultNameSystem(),
 		clientGen.Packages,
 	); err != nil {
@@ -61,24 +67,28 @@ func Run(opts cgargs.Options) {
 	}
 
 	groups := map[string]bool{}
+	listerGroups := map[string]bool{}
+	informerGroups := map[string]bool{}
+	deepCopygroups := map[string]bool{}
 	for groupName, group := range customArgs.Options.Groups {
 		if group.GenerateTypes {
+			deepCopygroups[groupName] = true
+		}
+		if group.GenerateClients {
 			groups[groupName] = true
+		}
+		if group.GenerateListers {
+			listerGroups[groupName] = true
+		}
+		if group.GenerateInformers {
+			informerGroups[groupName] = true
 		}
 	}
 
-	if len(groups) == 0 {
+	if len(deepCopygroups) == 0 && len(groups) == 0 && len(listerGroups) == 0 && len(informerGroups) == 0 {
 		if err := copyGoPathToModules(customArgs); err != nil {
 			logrus.Fatalf("go modules copy failed: %v", err)
 		}
-
-		if opts.GenMocks {
-			if err := clientGen.GenerateMocks(); err != nil {
-				logrus.Errorf("mocks failed: %v", err)
-				return
-			}
-		}
-
 		return
 	}
 
@@ -86,7 +96,7 @@ func Run(opts cgargs.Options) {
 		logrus.Fatalf("go modules copy failed: %v", err)
 	}
 
-	if err := generateDeepcopy(groups, customArgs); err != nil {
+	if err := generateDeepcopy(deepCopygroups, customArgs); err != nil {
 		logrus.Fatalf("deepcopy failed: %v", err)
 	}
 
@@ -94,23 +104,16 @@ func Run(opts cgargs.Options) {
 		logrus.Fatalf("clientset failed: %v", err)
 	}
 
-	if err := generateListers(groups, customArgs); err != nil {
+	if err := generateListers(listerGroups, customArgs); err != nil {
 		logrus.Fatalf("listers failed: %v", err)
 	}
 
-	if err := generateInformers(groups, customArgs); err != nil {
+	if err := generateInformers(informerGroups, customArgs); err != nil {
 		logrus.Fatalf("informers failed: %v", err)
 	}
 
 	if err := copyGoPathToModules(customArgs); err != nil {
 		logrus.Fatalf("go modules copy failed: %v", err)
-	}
-
-	if opts.GenMocks {
-		if err := clientGen.GenerateMocks(); err != nil {
-			logrus.Errorf("mocks failed: %v", err)
-			return
-		}
 	}
 }
 
@@ -141,15 +144,11 @@ func copyGoPathToModules(customArgs *cgargs.CustomArgs) error {
 
 		return filepath.Walk(pkg, func(path string, info os.FileInfo, err error) error {
 			newPath := strings.Replace(path, pkg, ".", 1)
-			if _, err := os.Stat(newPath); os.IsNotExist(err) {
-				if info.IsDir() {
-					return os.Mkdir(newPath, info.Mode())
-				}
-
-				return copyFile(path, newPath)
+			if info.IsDir() {
+				return os.MkdirAll(newPath, info.Mode())
 			}
 
-			return err
+			return copyFile(path, newPath)
 		})
 	}
 
@@ -182,6 +181,10 @@ func copyFile(src, dst string) error {
 }
 
 func generateDeepcopy(groups map[string]bool, customArgs *cgargs.CustomArgs) error {
+	if len(groups) == 0 {
+		return nil
+	}
+
 	deepCopyCustomArgs := &dpargs.CustomArgs{}
 
 	args := args.Default().WithoutDefaultFlagParsing()
@@ -204,6 +207,10 @@ func generateDeepcopy(groups map[string]bool, customArgs *cgargs.CustomArgs) err
 }
 
 func generateClientset(groups map[string]bool, customArgs *cgargs.CustomArgs) error {
+	if len(groups) == 0 {
+		return nil
+	}
+
 	args, clientSetArgs := csargs.NewDefaults()
 	clientSetArgs.ClientsetName = "versioned"
 	args.OutputBase = customArgs.OutputBase
@@ -223,10 +230,14 @@ func generateClientset(groups map[string]bool, customArgs *cgargs.CustomArgs) er
 	})
 
 	for _, gv := range order {
+		packageName := customArgs.Options.Groups[gv.Group].PackageName
+		if packageName == "" {
+			packageName = gv.Group
+		}
 		names := customArgs.TypesByGroup[gv]
 		args.InputDirs = append(args.InputDirs, names[0].Package)
 		clientSetArgs.Groups = append(clientSetArgs.Groups, types2.GroupVersions{
-			PackageName: gv.Group,
+			PackageName: packageName,
 			Group:       types2.Group(gv.Group),
 			Versions: []types2.PackageVersion{
 				{
@@ -237,12 +248,71 @@ func generateClientset(groups map[string]bool, customArgs *cgargs.CustomArgs) er
 		})
 	}
 
-	return args.Execute(cs.NameSystems(),
+	return args.Execute(cs.NameSystems(nil),
 		cs.DefaultNameSystem(),
-		cs.Packages)
+		setGenClient(groups, customArgs.TypesByGroup, cs.Packages))
+}
+
+func setGenClient(groups map[string]bool, typesByGroup map[schema.GroupVersion][]*types.Name, f func(*generator.Context, *args.GeneratorArgs) generator.Packages) func(*generator.Context, *args.GeneratorArgs) generator.Packages {
+	return func(context *generator.Context, generatorArgs *args.GeneratorArgs) generator.Packages {
+		for gv, names := range typesByGroup {
+			if !groups[gv.Group] {
+				continue
+			}
+			for _, name := range names {
+				var (
+					p           = context.Universe.Package(name.Package)
+					t           = p.Type(name.Name)
+					status      bool
+					nsed        bool
+					kubebuilder bool
+				)
+
+				for _, line := range append(t.SecondClosestCommentLines, t.CommentLines...) {
+					switch {
+					case strings.Contains(line, "+kubebuilder:object:root=true"):
+						kubebuilder = true
+						t.SecondClosestCommentLines = append(t.SecondClosestCommentLines, "+genclient")
+					case strings.Contains(line, "+kubebuilder:subresource:status"):
+						status = true
+					case strings.Contains(line, "+kubebuilder:resource:") && strings.Contains(line, "scope=Namespaced"):
+						nsed = true
+					}
+				}
+
+				if kubebuilder {
+					if !nsed {
+						t.SecondClosestCommentLines = append(t.SecondClosestCommentLines, "+genclient:nonNamespaced")
+					}
+					if !status {
+						t.SecondClosestCommentLines = append(t.SecondClosestCommentLines, "+genclient:noStatus")
+					}
+
+					foundGroup := false
+					for _, comment := range p.DocComments {
+						if strings.Contains(comment, "+groupName=") {
+							foundGroup = true
+							break
+						}
+					}
+
+					if !foundGroup {
+						p.DocComments = append(p.DocComments, "+groupName="+gv.Group)
+						p.Comments = append(p.Comments, "+groupName="+gv.Group)
+						fmt.Println(gv.Group, p.DocComments, p.Comments, p.Path)
+					}
+				}
+			}
+		}
+		return f(context, generatorArgs)
+	}
 }
 
 func generateInformers(groups map[string]bool, customArgs *cgargs.CustomArgs) error {
+	if len(groups) == 0 {
+		return nil
+	}
+
 	args, clientSetArgs := infargs.NewDefaults()
 	clientSetArgs.VersionedClientSetPackage = filepath.Join(customArgs.Package, "clientset/versioned")
 	clientSetArgs.ListersPackage = filepath.Join(customArgs.Package, "listers")
@@ -257,12 +327,16 @@ func generateInformers(groups map[string]bool, customArgs *cgargs.CustomArgs) er
 		args.InputDirs = append(args.InputDirs, names[0].Package)
 	}
 
-	return args.Execute(inf.NameSystems(),
+	return args.Execute(inf.NameSystems(nil),
 		inf.DefaultNameSystem(),
-		inf.Packages)
+		setGenClient(groups, customArgs.TypesByGroup, inf.Packages))
 }
 
 func generateListers(groups map[string]bool, customArgs *cgargs.CustomArgs) error {
+	if len(groups) == 0 {
+		return nil
+	}
+
 	args, _ := lsargs.NewDefaults()
 	args.OutputBase = customArgs.OutputBase
 	args.OutputPackagePath = filepath.Join(customArgs.Package, "listers")
@@ -275,23 +349,32 @@ func generateListers(groups map[string]bool, customArgs *cgargs.CustomArgs) erro
 		args.InputDirs = append(args.InputDirs, names[0].Package)
 	}
 
-	return args.Execute(ls.NameSystems(),
+	return args.Execute(ls.NameSystems(nil),
 		ls.DefaultNameSystem(),
-		ls.Packages)
+		setGenClient(groups, customArgs.TypesByGroup, ls.Packages))
 }
 
 func parseTypes(customArgs *cgargs.CustomArgs) []string {
 	for groupName, group := range customArgs.Options.Groups {
-		if group.GenerateTypes {
-			group.InformersPackage = filepath.Join(customArgs.Package, "informers/externalversions")
-			group.ClientSetPackage = filepath.Join(customArgs.Package, "clientset/versioned")
-			group.ListersPackage = filepath.Join(customArgs.Package, "listers")
+		if group.GenerateTypes || group.GenerateClients {
+			if group.InformersPackage == "" {
+				group.InformersPackage = filepath.Join(customArgs.Package, "informers/externalversions")
+			}
+			if group.ClientSetPackage == "" {
+				group.ClientSetPackage = filepath.Join(customArgs.Package, "clientset/versioned")
+			}
+			if group.ListersPackage == "" {
+				group.ListersPackage = filepath.Join(customArgs.Package, "listers")
+			}
 			customArgs.Options.Groups[groupName] = group
 		}
 	}
 
 	for groupName, group := range customArgs.Options.Groups {
-		cgargs.ObjectsToGroupVersion(groupName, group.Types, customArgs.TypesByGroup)
+		if err := cgargs.ObjectsToGroupVersion(groupName, group.Types, customArgs.TypesByGroup); err != nil {
+			// sorry, should really handle this better
+			panic(err)
+		}
 	}
 
 	var inputDirs []string
