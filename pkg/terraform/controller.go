@@ -3,6 +3,7 @@ package terraform
 import (
 	"context"
 
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/terraform/execution"
 	"github.com/rancher/terraform-controller/pkg/terraform/module"
@@ -28,6 +29,33 @@ func Register(
 	serviceAccounts corev1.ServiceAccountController,
 	jobs batchv1.JobController,
 ) {
+	// watch for modules
+	relatedresource.Watch(ctx, "state-module-watch",
+		func(namespace, name string, obj runtime.Object) ([]relatedresource.Key, error) {
+			var statesFound []string
+			var result []relatedresource.Key
+			stateList, err := states.List(namespace, metaV1.ListOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for _, state := range stateList.Items {
+				if _, ok := obj.(*v1.Module); ok {
+					module := obj.(*v1.Module)
+					if state.Spec.ModuleName == module.Name {
+						statesFound = append(statesFound, state.Name)
+					}
+				}
+			}
+			if len(statesFound) > 0 {
+				for _, foundState := range statesFound {
+					result = append(result, relatedresource.NewKey(namespace, foundState))
+				}
+				return result, nil
+			}
+			return nil, nil
+		},
+		states,
+		modules)
 	// watch configs and secrets
 	relatedresource.Watch(ctx, "state-config-secret-watch",
 		func(namespace, name string, obj runtime.Object) ([]relatedresource.Key, error) {
