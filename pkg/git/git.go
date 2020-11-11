@@ -7,16 +7,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func BranchCommit(ctx context.Context, url string, branch string, auth *Auth) (string, error) {
+func GetCommit(ctx context.Context, url, branch, tag string, auth *Auth) (string, error) {
 	url, env, close := auth.Populate(url)
 	defer close()
 
-	lines, err := git(ctx, env, "ls-remote", url, formatRefForBranch(branch))
+	lines, err := git(ctx, env, "ls-remote", url, formatRef(branch, tag))
 	if err != nil {
 		return "", err
 	}
 
-	return firstField(lines, fmt.Sprintf("no commit for branch: %s", branch))
+	return firstField(lines, fmt.Sprintf("no commit for branch: %s or tag: %s", branch, tag))
 }
 
 func CloneRepo(ctx context.Context, url string, commit string, auth *Auth) error {

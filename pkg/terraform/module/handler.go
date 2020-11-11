@@ -66,8 +66,14 @@ func (h *handler) updateHash(module *v1.Module, hash string) (*v1.Module, error)
 
 func (h *handler) updateCommit(key string, module *v1.Module) (*v1.Module, error) {
 	branch := module.Spec.Git.Branch
+	tag := module.Spec.Git.Tag
+
 	if branch == "" {
 		branch = "master"
+	}
+	// unset branch if tag is set
+	if tag != "" {
+		branch = ""
 	}
 
 	auth, err := h.getAuth(module.Namespace, module.Spec)
@@ -75,7 +81,7 @@ func (h *handler) updateCommit(key string, module *v1.Module) (*v1.Module, error
 		return nil, err
 	}
 
-	commit, err := git.BranchCommit(h.ctx, module.Spec.Git.URL, branch, &auth)
+	commit, err := git.GetCommit(h.ctx, module.Spec.Git.URL, branch, tag, &auth)
 	if err != nil {
 		return nil, err
 	}
