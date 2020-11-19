@@ -16,10 +16,10 @@ import (
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/git"
 	"github.com/rancher/terraform-controller/pkg/gz"
-	batchcontroller "github.com/rancher/wrangler-api/pkg/generated/controllers/batch"
-	batchv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/batch/v1"
-	corecontroller "github.com/rancher/wrangler-api/pkg/generated/controllers/core"
-	corev1 "github.com/rancher/wrangler-api/pkg/generated/controllers/core/v1"
+	batchcontroller "github.com/rancher/wrangler/pkg/generated/controllers/batch"
+	batchv1 "github.com/rancher/wrangler/pkg/generated/controllers/batch/v1"
+	corecontroller "github.com/rancher/wrangler/pkg/generated/controllers/core"
+	corev1 "github.com/rancher/wrangler/pkg/generated/controllers/core/v1"
 	"github.com/sirupsen/logrus"
 	coreV1 "k8s.io/api/core/v1"
 	k8sError "k8s.io/apimachinery/pkg/api/errors"
@@ -272,9 +272,6 @@ func (r *Runner) SetExecutionLogs(s string) error {
 
 		copy := exec.DeepCopy()
 		copy.Status.JobLogs = base64.StdEncoding.EncodeToString(compressedLogs)
-		if err != nil {
-			return err
-		}
 
 		exec, err = r.executions.Update(copy)
 		if err != nil {

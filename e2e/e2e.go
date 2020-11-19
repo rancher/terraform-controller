@@ -61,7 +61,7 @@ func (e *E2E) createState() error {
 		return err
 	}
 
-	_, err = cs.States(e.namespace).Create(e.getState())
+	_, err = cs.States(e.namespace).Create(e.ctx, e.getState(), v12.CreateOptions{})
 	if err != nil {
 		return err
 	}
@@ -75,13 +75,13 @@ func (e *E2E) createModule() error {
 		return err
 	}
 
-	_, err = cs.Modules(e.namespace).Create(e.getModule())
+	_, err = cs.Modules(e.namespace).Create(e.ctx, e.getModule(), v12.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
-	err = wait.Poll(time.Second, 15*time.Second, func() (bool, error) {
-		module, err := cs.Modules(e.namespace).Get(e.generateModuleName(), v12.GetOptions{})
+	err = wait.Poll(time.Second, 45*time.Second, func() (bool, error) {
+		module, err := cs.Modules(e.namespace).Get(e.ctx, e.generateModuleName(), v12.GetOptions{})
 		if err == nil && module.Status.ContentHash != "" {
 			return true, nil
 		}
@@ -102,22 +102,22 @@ func (e *E2E) createModule() error {
 }
 
 func (e *E2E) createVariables() error {
-	_, err := e.cs.CoreV1().Secrets(e.namespace).Create(e.getSecret())
+	_, err := e.cs.CoreV1().Secrets(e.namespace).Create(e.ctx, e.getSecret(), v12.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
-	_, err = e.cs.CoreV1().Secrets(e.namespace).Create(e.getSecretEnv())
+	_, err = e.cs.CoreV1().Secrets(e.namespace).Create(e.ctx, e.getSecretEnv(), v12.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
-	_, err = e.cs.CoreV1().ConfigMaps(e.namespace).Create(e.getConfigMap())
+	_, err = e.cs.CoreV1().ConfigMaps(e.namespace).Create(e.ctx, e.getConfigMap(), v12.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
-	_, err = e.cs.CoreV1().ConfigMaps(e.namespace).Create(e.getConfigMapEnv())
+	_, err = e.cs.CoreV1().ConfigMaps(e.namespace).Create(e.ctx, e.getConfigMapEnv(), v12.CreateOptions{})
 	if err != nil {
 		return err
 	}

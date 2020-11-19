@@ -20,13 +20,17 @@ package v1
 
 import (
 	"context"
+	"time"
 
+	"github.com/rancher/lasso/pkg/client"
+	"github.com/rancher/lasso/pkg/controller"
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
-	clientset "github.com/rancher/terraform-controller/pkg/generated/clientset/versioned/typed/terraformcontroller.cattle.io/v1"
-	informers "github.com/rancher/terraform-controller/pkg/generated/informers/externalversions/terraformcontroller.cattle.io/v1"
-	listers "github.com/rancher/terraform-controller/pkg/generated/listers/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/wrangler/pkg/apply"
+	"github.com/rancher/wrangler/pkg/condition"
 	"github.com/rancher/wrangler/pkg/generic"
+	"github.com/rancher/wrangler/pkg/kv"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,20 +44,15 @@ import (
 type ExecutionHandler func(string, *v1.Execution) (*v1.Execution, error)
 
 type ExecutionController interface {
+	generic.ControllerMeta
 	ExecutionClient
 
 	OnChange(ctx context.Context, name string, sync ExecutionHandler)
 	OnRemove(ctx context.Context, name string, sync ExecutionHandler)
 	Enqueue(namespace, name string)
+	EnqueueAfter(namespace, name string, duration time.Duration)
 
 	Cache() ExecutionCache
-
-	Informer() cache.SharedIndexInformer
-	GroupVersionKind() schema.GroupVersionKind
-
-	AddGenericHandler(ctx context.Context, name string, handler generic.Handler)
-	AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler)
-	Updater() generic.Updater
 }
 
 type ExecutionClient interface {
@@ -78,18 +77,22 @@ type ExecutionCache interface {
 type ExecutionIndexer func(obj *v1.Execution) ([]string, error)
 
 type executionController struct {
-	controllerManager *generic.ControllerManager
-	clientGetter      clientset.ExecutionsGetter
-	informer          informers.ExecutionInformer
-	gvk               schema.GroupVersionKind
+	controller    controller.SharedController
+	client        *client.Client
+	gvk           schema.GroupVersionKind
+	groupResource schema.GroupResource
 }
 
-func NewExecutionController(gvk schema.GroupVersionKind, controllerManager *generic.ControllerManager, clientGetter clientset.ExecutionsGetter, informer informers.ExecutionInformer) ExecutionController {
+func NewExecutionController(gvk schema.GroupVersionKind, resource string, namespaced bool, controller controller.SharedControllerFactory) ExecutionController {
+	c := controller.ForResourceKind(gvk.GroupVersion().WithResource(resource), gvk.Kind, namespaced)
 	return &executionController{
-		controllerManager: controllerManager,
-		clientGetter:      clientGetter,
-		informer:          informer,
-		gvk:               gvk,
+		controller: c,
+		client:     c.Client(),
+		gvk:        gvk,
+		groupResource: schema.GroupResource{
+			Group:    gvk.Group,
+			Resource: resource,
+		},
 	}
 }
 
@@ -118,35 +121,29 @@ func (c *executionController) Updater() generic.Updater {
 	}
 }
 
-func UpdateExecutionOnChange(updater generic.Updater, handler ExecutionHandler) ExecutionHandler {
-	return func(key string, obj *v1.Execution) (*v1.Execution, error) {
-		if obj == nil {
-			return handler(key, nil)
-		}
-
-		copyObj := obj.DeepCopy()
-		newObj, err := handler(key, copyObj)
-		if newObj != nil {
-			copyObj = newObj
-		}
-		if obj.ResourceVersion == copyObj.ResourceVersion && !equality.Semantic.DeepEqual(obj, copyObj) {
-			newObj, err := updater(copyObj)
-			if newObj != nil && err == nil {
-				copyObj = newObj.(*v1.Execution)
-			}
-		}
-
-		return copyObj, err
+func UpdateExecutionDeepCopyOnChange(client ExecutionClient, obj *v1.Execution, handler func(obj *v1.Execution) (*v1.Execution, error)) (*v1.Execution, error) {
+	if obj == nil {
+		return obj, nil
 	}
+
+	copyObj := obj.DeepCopy()
+	newObj, err := handler(copyObj)
+	if newObj != nil {
+		copyObj = newObj
+	}
+	if obj.ResourceVersion == copyObj.ResourceVersion && !equality.Semantic.DeepEqual(obj, copyObj) {
+		return client.Update(copyObj)
+	}
+
+	return copyObj, err
 }
 
 func (c *executionController) AddGenericHandler(ctx context.Context, name string, handler generic.Handler) {
-	c.controllerManager.AddHandler(ctx, c.gvk, c.informer.Informer(), name, handler)
+	c.controller.RegisterHandler(ctx, name, controller.SharedControllerHandlerFunc(handler))
 }
 
 func (c *executionController) AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler) {
-	removeHandler := generic.NewRemoveHandler(name, c.Updater(), handler)
-	c.controllerManager.AddHandler(ctx, c.gvk, c.informer.Informer(), name, removeHandler)
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), handler))
 }
 
 func (c *executionController) OnChange(ctx context.Context, name string, sync ExecutionHandler) {
@@ -154,16 +151,19 @@ func (c *executionController) OnChange(ctx context.Context, name string, sync Ex
 }
 
 func (c *executionController) OnRemove(ctx context.Context, name string, sync ExecutionHandler) {
-	removeHandler := generic.NewRemoveHandler(name, c.Updater(), FromExecutionHandlerToHandler(sync))
-	c.AddGenericHandler(ctx, name, removeHandler)
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), FromExecutionHandlerToHandler(sync)))
 }
 
 func (c *executionController) Enqueue(namespace, name string) {
-	c.controllerManager.Enqueue(c.gvk, c.informer.Informer(), namespace, name)
+	c.controller.Enqueue(namespace, name)
+}
+
+func (c *executionController) EnqueueAfter(namespace, name string, duration time.Duration) {
+	c.controller.EnqueueAfter(namespace, name, duration)
 }
 
 func (c *executionController) Informer() cache.SharedIndexInformer {
-	return c.informer.Informer()
+	return c.controller.Informer()
 }
 
 func (c *executionController) GroupVersionKind() schema.GroupVersionKind {
@@ -172,54 +172,75 @@ func (c *executionController) GroupVersionKind() schema.GroupVersionKind {
 
 func (c *executionController) Cache() ExecutionCache {
 	return &executionCache{
-		lister:  c.informer.Lister(),
-		indexer: c.informer.Informer().GetIndexer(),
+		indexer:  c.Informer().GetIndexer(),
+		resource: c.groupResource,
 	}
 }
 
 func (c *executionController) Create(obj *v1.Execution) (*v1.Execution, error) {
-	return c.clientGetter.Executions(obj.Namespace).Create(obj)
+	result := &v1.Execution{}
+	return result, c.client.Create(context.TODO(), obj.Namespace, obj, result, metav1.CreateOptions{})
 }
 
 func (c *executionController) Update(obj *v1.Execution) (*v1.Execution, error) {
-	return c.clientGetter.Executions(obj.Namespace).Update(obj)
+	result := &v1.Execution{}
+	return result, c.client.Update(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
 func (c *executionController) UpdateStatus(obj *v1.Execution) (*v1.Execution, error) {
-	return c.clientGetter.Executions(obj.Namespace).UpdateStatus(obj)
+	result := &v1.Execution{}
+	return result, c.client.UpdateStatus(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
 func (c *executionController) Delete(namespace, name string, options *metav1.DeleteOptions) error {
-	return c.clientGetter.Executions(namespace).Delete(name, options)
+	if options == nil {
+		options = &metav1.DeleteOptions{}
+	}
+	return c.client.Delete(context.TODO(), namespace, name, *options)
 }
 
 func (c *executionController) Get(namespace, name string, options metav1.GetOptions) (*v1.Execution, error) {
-	return c.clientGetter.Executions(namespace).Get(name, options)
+	result := &v1.Execution{}
+	return result, c.client.Get(context.TODO(), namespace, name, result, options)
 }
 
 func (c *executionController) List(namespace string, opts metav1.ListOptions) (*v1.ExecutionList, error) {
-	return c.clientGetter.Executions(namespace).List(opts)
+	result := &v1.ExecutionList{}
+	return result, c.client.List(context.TODO(), namespace, result, opts)
 }
 
 func (c *executionController) Watch(namespace string, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.clientGetter.Executions(namespace).Watch(opts)
+	return c.client.Watch(context.TODO(), namespace, opts)
 }
 
-func (c *executionController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Execution, err error) {
-	return c.clientGetter.Executions(namespace).Patch(name, pt, data, subresources...)
+func (c *executionController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (*v1.Execution, error) {
+	result := &v1.Execution{}
+	return result, c.client.Patch(context.TODO(), namespace, name, pt, data, result, metav1.PatchOptions{}, subresources...)
 }
 
 type executionCache struct {
-	lister  listers.ExecutionLister
-	indexer cache.Indexer
+	indexer  cache.Indexer
+	resource schema.GroupResource
 }
 
 func (c *executionCache) Get(namespace, name string) (*v1.Execution, error) {
-	return c.lister.Executions(namespace).Get(name)
+	obj, exists, err := c.indexer.GetByKey(namespace + "/" + name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, errors.NewNotFound(c.resource, name)
+	}
+	return obj.(*v1.Execution), nil
 }
 
-func (c *executionCache) List(namespace string, selector labels.Selector) ([]*v1.Execution, error) {
-	return c.lister.Executions(namespace).List(selector)
+func (c *executionCache) List(namespace string, selector labels.Selector) (ret []*v1.Execution, err error) {
+
+	err = cache.ListAllByNamespace(c.indexer, namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1.Execution))
+	})
+
+	return ret, err
 }
 
 func (c *executionCache) AddIndexer(indexName string, indexer ExecutionIndexer) {
@@ -235,8 +256,117 @@ func (c *executionCache) GetByIndex(indexName, key string) (result []*v1.Executi
 	if err != nil {
 		return nil, err
 	}
+	result = make([]*v1.Execution, 0, len(objs))
 	for _, obj := range objs {
 		result = append(result, obj.(*v1.Execution))
 	}
 	return result, nil
+}
+
+type ExecutionStatusHandler func(obj *v1.Execution, status v1.ExecutionStatus) (v1.ExecutionStatus, error)
+
+type ExecutionGeneratingHandler func(obj *v1.Execution, status v1.ExecutionStatus) ([]runtime.Object, v1.ExecutionStatus, error)
+
+func RegisterExecutionStatusHandler(ctx context.Context, controller ExecutionController, condition condition.Cond, name string, handler ExecutionStatusHandler) {
+	statusHandler := &executionStatusHandler{
+		client:    controller,
+		condition: condition,
+		handler:   handler,
+	}
+	controller.AddGenericHandler(ctx, name, FromExecutionHandlerToHandler(statusHandler.sync))
+}
+
+func RegisterExecutionGeneratingHandler(ctx context.Context, controller ExecutionController, apply apply.Apply,
+	condition condition.Cond, name string, handler ExecutionGeneratingHandler, opts *generic.GeneratingHandlerOptions) {
+	statusHandler := &executionGeneratingHandler{
+		ExecutionGeneratingHandler: handler,
+		apply:                      apply,
+		name:                       name,
+		gvk:                        controller.GroupVersionKind(),
+	}
+	if opts != nil {
+		statusHandler.opts = *opts
+	}
+	controller.OnChange(ctx, name, statusHandler.Remove)
+	RegisterExecutionStatusHandler(ctx, controller, condition, name, statusHandler.Handle)
+}
+
+type executionStatusHandler struct {
+	client    ExecutionClient
+	condition condition.Cond
+	handler   ExecutionStatusHandler
+}
+
+func (a *executionStatusHandler) sync(key string, obj *v1.Execution) (*v1.Execution, error) {
+	if obj == nil {
+		return obj, nil
+	}
+
+	origStatus := obj.Status.DeepCopy()
+	obj = obj.DeepCopy()
+	newStatus, err := a.handler(obj, obj.Status)
+	if err != nil {
+		// Revert to old status on error
+		newStatus = *origStatus.DeepCopy()
+	}
+
+	if a.condition != "" {
+		if errors.IsConflict(err) {
+			a.condition.SetError(&newStatus, "", nil)
+		} else {
+			a.condition.SetError(&newStatus, "", err)
+		}
+	}
+	if !equality.Semantic.DeepEqual(origStatus, &newStatus) {
+		if a.condition != "" {
+			// Since status has changed, update the lastUpdatedTime
+			a.condition.LastUpdated(&newStatus, time.Now().UTC().Format(time.RFC3339))
+		}
+
+		var newErr error
+		obj.Status = newStatus
+		newObj, newErr := a.client.UpdateStatus(obj)
+		if err == nil {
+			err = newErr
+		}
+		if newErr == nil {
+			obj = newObj
+		}
+	}
+	return obj, err
+}
+
+type executionGeneratingHandler struct {
+	ExecutionGeneratingHandler
+	apply apply.Apply
+	opts  generic.GeneratingHandlerOptions
+	gvk   schema.GroupVersionKind
+	name  string
+}
+
+func (a *executionGeneratingHandler) Remove(key string, obj *v1.Execution) (*v1.Execution, error) {
+	if obj != nil {
+		return obj, nil
+	}
+
+	obj = &v1.Execution{}
+	obj.Namespace, obj.Name = kv.RSplit(key, "/")
+	obj.SetGroupVersionKind(a.gvk)
+
+	return nil, generic.ConfigureApplyForObject(a.apply, obj, &a.opts).
+		WithOwner(obj).
+		WithSetID(a.name).
+		ApplyObjects()
+}
+
+func (a *executionGeneratingHandler) Handle(obj *v1.Execution, status v1.ExecutionStatus) (v1.ExecutionStatus, error) {
+	objs, newStatus, err := a.ExecutionGeneratingHandler(obj, status)
+	if err != nil {
+		return newStatus, err
+	}
+
+	return newStatus, generic.ConfigureApplyForObject(a.apply, obj, &a.opts).
+		WithOwner(obj).
+		WithSetID(a.name).
+		ApplyObjects(objs...)
 }

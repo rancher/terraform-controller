@@ -2,9 +2,26 @@ package kv
 
 import "strings"
 
+// Like split but if there is only one item return "", item
+func RSplit(s, sep string) (string, string) {
+	parts := strings.SplitN(s, sep, 2)
+	if len(parts) == 1 {
+		return "", strings.TrimSpace(parts[0])
+	}
+	return strings.TrimSpace(parts[0]), strings.TrimSpace(safeIndex(parts, 1))
+}
+
 func Split(s, sep string) (string, string) {
 	parts := strings.SplitN(s, sep, 2)
 	return strings.TrimSpace(parts[0]), strings.TrimSpace(safeIndex(parts, 1))
+}
+
+func SplitLast(s, sep string) (string, string) {
+	idx := strings.LastIndex(s, sep)
+	if idx > -1 {
+		return strings.TrimSpace(s[:idx]), strings.TrimSpace(s[idx+1:])
+	}
+	return s, ""
 }
 
 func SplitMap(s, sep string) map[string]string {

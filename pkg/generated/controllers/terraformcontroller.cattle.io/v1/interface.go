@@ -19,11 +19,15 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/rancher/lasso/pkg/controller"
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
-	clientset "github.com/rancher/terraform-controller/pkg/generated/clientset/versioned/typed/terraformcontroller.cattle.io/v1"
-	informers "github.com/rancher/terraform-controller/pkg/generated/informers/externalversions/terraformcontroller.cattle.io/v1"
-	"github.com/rancher/wrangler/pkg/generic"
+	"github.com/rancher/wrangler/pkg/schemes"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+func init() {
+	schemes.Register(v1.AddToScheme)
+}
 
 type Interface interface {
 	Execution() ExecutionController
@@ -31,27 +35,22 @@ type Interface interface {
 	State() StateController
 }
 
-func New(controllerManager *generic.ControllerManager, client clientset.TerraformcontrollerV1Interface,
-	informers informers.Interface) Interface {
+func New(controllerFactory controller.SharedControllerFactory) Interface {
 	return &version{
-		controllerManager: controllerManager,
-		client:            client,
-		informers:         informers,
+		controllerFactory: controllerFactory,
 	}
 }
 
 type version struct {
-	controllerManager *generic.ControllerManager
-	informers         informers.Interface
-	client            clientset.TerraformcontrollerV1Interface
+	controllerFactory controller.SharedControllerFactory
 }
 
 func (c *version) Execution() ExecutionController {
-	return NewExecutionController(v1.SchemeGroupVersion.WithKind("Execution"), c.controllerManager, c.client, c.informers.Executions())
+	return NewExecutionController(schema.GroupVersionKind{Group: "terraformcontroller.cattle.io", Version: "v1", Kind: "Execution"}, "executions", true, c.controllerFactory)
 }
 func (c *version) Module() ModuleController {
-	return NewModuleController(v1.SchemeGroupVersion.WithKind("Module"), c.controllerManager, c.client, c.informers.Modules())
+	return NewModuleController(schema.GroupVersionKind{Group: "terraformcontroller.cattle.io", Version: "v1", Kind: "Module"}, "modules", true, c.controllerFactory)
 }
 func (c *version) State() StateController {
-	return NewStateController(v1.SchemeGroupVersion.WithKind("State"), c.controllerManager, c.client, c.informers.States())
+	return NewStateController(schema.GroupVersionKind{Group: "terraformcontroller.cattle.io", Version: "v1", Kind: "State"}, "states", true, c.controllerFactory)
 }

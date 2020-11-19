@@ -25,22 +25,22 @@ func (e *E2E) initialize() error {
 		return err
 	}
 
-	_, err = e.cs.CoreV1().Namespaces().Create(e.getNs())
+	_, err = e.cs.CoreV1().Namespaces().Create(e.ctx, e.getNs(), v13.CreateOptions{})
 	if err != nil {
 		return err
 	}
-	_, err = e.cs.RbacV1().ClusterRoleBindings().Create(e.getCrb())
+	_, err = e.cs.RbacV1().ClusterRoleBindings().Create(e.ctx, e.getCrb(), v13.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
-	_, err = e.cs.CoreV1().ServiceAccounts(e.namespace).Create(e.getSa())
+	_, err = e.cs.CoreV1().ServiceAccounts(e.namespace).Create(e.ctx, e.getSa(), v13.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
 	err = wait.Poll(time.Second, 15*time.Second, func() (bool, error) {
-		_, err := e.cs.CoreV1().ServiceAccounts(e.namespace).Get(e.namespace, v13.GetOptions{})
+		_, err := e.cs.CoreV1().ServiceAccounts(e.namespace).Get(e.ctx, e.namespace, v13.GetOptions{})
 		if err == nil {
 			return true, nil
 		}
