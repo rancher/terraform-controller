@@ -123,8 +123,7 @@ func needsUpdate(m *v1.Module) bool {
 func isPolling(spec v1.ModuleSpec) bool {
 	return len(spec.Content) == 0 &&
 		spec.Git.URL != "" &&
-		spec.Git.Commit == "" &&
-		spec.Git.Tag == ""
+		spec.Git.Commit == ""
 }
 
 func computeHash(obj *v1.Module) string {
