@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"fmt"
+	"time"
 
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
@@ -20,6 +21,7 @@ const (
 	ActionDestroy = "destroy"
 	//Default Image
 	DefaultExecutorImage = "rancher/terraform-controller-executor"
+	RefreshAnnotationKey = "terraformcontroller.cattle.io/run-every"
 )
 
 func NewHandler(
@@ -83,6 +85,20 @@ func (h *Handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 		return h.states.Update(obj)
 	}
 
+	now := metaV1.Now()
+
+	if scheduleRefresh(obj, &now) {
+		duration, err := time.ParseDuration(obj.Annotations[RefreshAnnotationKey])
+		if err != nil {
+			logrus.Errorf("Failed to parse duration annotation: %s", err.Error())
+			return obj, err
+		}
+		schedule := metaV1.NewTime(now.Add(duration))
+
+		obj.Status.RefreshSchedule = schedule
+		return h.states.Update(obj)
+	}
+
 	if v1.StateConditionJobDeployed.IsTrue(obj) && obj.Status.LastRunHash != "" {
 		logrus.Debugf("job already running %s, checking execution", obj.Status.LastRunHash)
 		execution, err := h.executions.Get(obj.Namespace, obj.Status.ExecutionName, metaV1.GetOptions{})
@@ -141,7 +157,20 @@ func (h *Handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 	obj.Status.ExecutionName = exec.Name
 	obj.Status.LastRunHash = runHash
 
+	if obj.Annotations[RefreshAnnotationKey] != "" {
+		duration, err := time.ParseDuration(obj.Annotations[RefreshAnnotationKey])
+		if err != nil {
+			logrus.Errorf("Failed to parse duration annotation: %s", err.Error())
+			return obj, err
+		}
+		h.states.EnqueueAfter(obj.Namespace, obj.Name, duration)
+	}
 	return h.states.Update(obj)
+}
+
+func scheduleRefresh(obj *v1.State, now *metaV1.Time) bool {
+	expired := obj.Status.RefreshSchedule.Before(now)
+	return expired && obj.Annotations[RefreshAnnotationKey] != ""
 }
 
 func (h *Handler) OnRemove(key string, obj *v1.State) (*v1.State, error) {
