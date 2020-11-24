@@ -3,7 +3,9 @@ package state
 import (
 	"context"
 	"fmt"
-	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
+	"time"
+
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 	batchv1 "github.com/rancher/wrangler/pkg/generated/controllers/batch/v1"
 	corev1 "github.com/rancher/wrangler/pkg/generated/controllers/core/v1"
@@ -19,6 +21,7 @@ const (
 	ActionDestroy = "destroy"
 	//Default Image
 	DefaultExecutorImage = "rancher/terraform-controller-executor"
+	RefreshAnnotationKey = "terraformcontroller.cattle.io/run-every"
 )
 
 func NewHandler(
@@ -62,6 +65,7 @@ type handler struct {
 
 func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 	logrus.Debugf("State On Change Handler %s", key)
+	logrus.Infof("got update for %s", key)
 	if obj == nil {
 		return nil, nil
 	}
@@ -79,6 +83,21 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 	if !ok {
 		v1.ExecutionConditionMissingInfo.SetStatusBool(obj, ok)
 		logrus.Debug("missing info")
+		return h.states.Update(obj)
+	}
+
+	now := metaV1.Now()
+
+	if scheduleRefresh(obj, &now) && v1.StateConditionScheduled.IsFalse(obj) {
+		duration, err := time.ParseDuration(obj.Annotations[RefreshAnnotationKey])
+		if err != nil {
+			logrus.Errorf("Failed to parse duration annotation: %s", err.Error())
+			return obj, err
+		}
+		schedule := metaV1.NewTime(now.Add(duration))
+
+		obj.Status.RefreshSchedule = schedule
+		v1.StateConditionScheduled.True(obj)
 		return h.states.Update(obj)
 	}
 
@@ -140,7 +159,23 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 	obj.Status.ExecutionName = exec.Name
 	obj.Status.LastRunHash = runHash
 
+	if obj.Annotations[RefreshAnnotationKey] != "" {
+		duration, err := time.ParseDuration(obj.Annotations[RefreshAnnotationKey])
+		if err != nil {
+			logrus.Errorf("Failed to parse duration annotation: %s", err.Error())
+			return obj, err
+		}
+		h.states.EnqueueAfter(obj.Namespace, obj.Name, duration)
+	}
 	return h.states.Update(obj)
+}
+
+func scheduleRefresh(obj *v1.State, now *metaV1.Time) bool {
+	expired := obj.Status.RefreshSchedule.Before(now)
+	if expired {
+		v1.StateConditionScheduled.False(obj)
+	}
+	return expired && obj.Annotations[RefreshAnnotationKey] != ""
 }
 
 func (h *handler) OnRemove(key string, obj *v1.State) (*v1.State, error) {

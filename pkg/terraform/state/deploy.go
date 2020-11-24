@@ -464,6 +464,11 @@ func generateRunHash(state *v1.State, vars map[string]string, h string, a string
 		fmt.Println("binary.Write failed:", err)
 	}
 
+	err = binary.Write(buf, binary.LittleEndian, state.Status.RefreshSchedule.Time.Unix())
+	if err != nil {
+		fmt.Println("binary.Write failed:", err)
+	}
+
 	hash := sha256.New()
 	if _, err := hash.Write([]byte(varHash)); err != nil {
 		logrus.Error("Failed to write to digest")
