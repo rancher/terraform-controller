@@ -3,10 +3,10 @@ FROM alpine
 # Need to grab terraform binary
 
 RUN apk add --no-cache curl git openssh unzip
-RUN curl -sLf https://releases.hashicorp.com/terraform/0.13.4/terraform_0.13.4_linux_amd64.zip -o terraform_0.13.4_linux_amd64.zip && \
-    unzip terraform_0.13.4_linux_amd64.zip -d /usr/bin && \
+RUN curl -sLf https://releases.hashicorp.com/terraform/0.14.2/terraform_0.14.2_linux_amd64.zip -o terraform_0.14.2_linux_amd64.zip && \
+    unzip terraform_0.14.2_linux_amd64.zip -d /usr/bin && \
     chmod +x /usr/bin/terraform && \
-    rm terraform_0.13.4_linux_amd64.zip
+    rm terraform_0.14.2_linux_amd64.zip
 
 COPY terraform-executor /usr/bin/
 
