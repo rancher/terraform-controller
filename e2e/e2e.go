@@ -219,7 +219,7 @@ func (e *E2E) getConfigMapEnv() *v1.ConfigMap {
 			Namespace: e.namespace,
 		},
 		Data: map[string]string{
-			"test_config_map_env": e.namespace,
+			"TF_VAR_test_config_map_env": e.namespace,
 		},
 	}
 }
