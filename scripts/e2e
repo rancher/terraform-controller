@@ -37,7 +37,6 @@ k3s ctr images import --base-name terraform-controller-executor artifacts/images
 k3s kubectl rollout status deployment coredns -n kube-system # make sure coredns is actually running
 
 export KUBECONFIG=$kubeconfig
-export NAMESPACE=terraform-controller
 
 ./bin/terraform-controller --threads 1&
 tfc_pid=$!
