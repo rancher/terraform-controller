@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: terraform-controller
+  name: terraform-controller
+  namespace: {{ .Release.Namespace }} 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: terraform-controller
+  template:
+    metadata:
+      labels:
+        run: terraform-controller
+    spec:
+      serviceAccountName: terraform-controller
+      containers:
+        - image: {{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }} 
+          name: terraform-controller
+          command: ["terraform-controller"]
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace

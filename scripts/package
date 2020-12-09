@@ -4,3 +4,4 @@ set -e
 $(dirname $0)/package-executor
 $(dirname $0)/package-controller
 $(dirname $0)/package-appliance
+$(dirname $0)/package-helm

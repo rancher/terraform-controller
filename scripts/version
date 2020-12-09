@@ -10,9 +10,20 @@ GIT_TAG=${DRONE_TAG:-$(git tag -l --contains HEAD | head -n 1)}
 if [[ -z "$DIRTY" && -n "$GIT_TAG" ]]; then
     VERSION=$GIT_TAG
 else
-    VERSION="${COMMIT}${DIRTY}"
+    VERSION="v0.0.0+${COMMIT}${DIRTY}"
 fi
 
 if [ -z "$ARCH" ]; then
     ARCH=$(go env GOHOSTARCH)
+fi
+
+SUFFIX="-${ARCH}"
+
+HELM_TAG=${TAG:-${VERSION}}
+TAG=${TAG:-${VERSION}${SUFFIX}}
+REPO=${REPO:-rancher}
+
+if echo $TAG | grep -q dirty; then
+    TAG=dev
+    HELM_TAG=dev
 fi
