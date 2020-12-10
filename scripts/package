@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
+mkdir -p $(dirname $0)/../dist/artifacts
+
 $(dirname $0)/package-executor
 $(dirname $0)/package-controller
 $(dirname $0)/package-appliance
+$(dirname $0)/package-cli
 $(dirname $0)/package-helm

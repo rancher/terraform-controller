@@ -3,20 +3,12 @@ set -e
 
 source $(dirname $0)/version
 
-ARCH=${ARCH:-"amd64"}
-SUFFIX=""
-[ "${ARCH}" != "amd64" ] && SUFFIX="_${ARCH}"
+cd $(dirname $0)/..
 
-cd $(dirname $0)/../package
+cp bin/terraform-executor package/
+cp bin/terraform-executor dist/artifacts/terraform-executor${SUFFIX}
 
-TAG=${TAG:-${VERSION}${SUFFIX}}
-REPO=${REPO:-rancher}
-
-if echo $TAG | grep -q dirty; then
-    TAG=dev
-fi
-
-cp ../bin/terraform-executor .
+cd package
 
 IMAGE=${REPO}/terraform-controller-executor:${TAG}
 docker build -t ${IMAGE} -f Dockerfile.executor .

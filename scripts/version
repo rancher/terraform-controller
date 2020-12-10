@@ -10,7 +10,7 @@ GIT_TAG=${DRONE_TAG:-$(git tag -l --contains HEAD | head -n 1)}
 if [[ -z "$DIRTY" && -n "$GIT_TAG" ]]; then
     VERSION=$GIT_TAG
 else
-    VERSION="v0.0.0+${COMMIT}${DIRTY}"
+    VERSION="${COMMIT}${DIRTY}"
 fi
 
 if [ -z "$ARCH" ]; then
@@ -19,11 +19,13 @@ fi
 
 SUFFIX="-${ARCH}"
 
-HELM_TAG=${TAG:-${VERSION}}
-TAG=${TAG:-${VERSION}${SUFFIX}}
+HELM_TAG=${GIT_TAG:-v0.0.0+${VERSION}}
+HELM_VERSION=${HELM_TAG/v/}
+TAG=${GIT_TAG:-${VERSION}${SUFFIX}}
 REPO=${REPO:-rancher}
 
-if echo $TAG | grep -q dirty; then
+if echo $GIT_TAG | grep -q dirty; then
     TAG=dev
-    HELM_TAG=dev
+    HELM_TAG=v0.0.0+${COMMIT}
+    HELM_VERSION=v0.0.0
 fi
