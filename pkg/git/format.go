@@ -23,6 +23,20 @@ func firstField(lines []string, errText string) (string, error) {
 	return fields[0], nil
 }
 
+func formatRef(branch, tag string) string {
+	if branch != "" {
+		return formatRefForBranch(branch)
+	}
+	if tag != "" {
+		return formatRefForTag(tag)
+	}
+	return ""
+}
+
 func formatRefForBranch(branch string) string {
 	return fmt.Sprintf("refs/heads/%s", branch)
+}
+
+func formatRefForTag(tag string) string {
+	return fmt.Sprintf("refs/tags/%s", tag)
 }
