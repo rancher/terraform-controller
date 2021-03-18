@@ -241,7 +241,7 @@ func runState(c *cli.Context) error {
 	}
 
 	copyObj := state.DeepCopy()
-	copyObj.Spec.Version += 1
+	copyObj.Spec.Version++
 	copyObj.Status.LastRunHash = ""
 	v1.StateConditionJobDeployed.False(copyObj)
 
@@ -271,7 +271,7 @@ func deleteState(c *cli.Context) error {
 
 	if state.DeletionTimestamp != nil {
 		state.Status.ExecutionName = ""
-		state.Spec.Version += 1
+		state.Spec.Version++
 		state.Status.LastRunHash = ""
 		v1.StateConditionJobDeployed.False(state)
 		_, err = controllers.states.Update(state)

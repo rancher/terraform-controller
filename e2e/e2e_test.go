@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	NAMESPACE       = "terraform-controller"
-	MODULE_URL      = "https://github.com/luthermonson/terraform-controller-test-module"
-	TEST_CONFIG_MAP = "test-config-map"
+	Namespace     = "terraform-controller"
+	ModuleURL     = "https://github.com/luthermonson/terraform-controller-test-module"
+	TestConfigMap = "test-config-map"
 )
 
 var e *E2E
@@ -30,12 +30,12 @@ func TestMain(m *testing.M) {
 	if _, err := os.Stat(kubeconfig); os.IsNotExist(err) {
 		logrus.Fatal("kubeconfig file does not exist")
 	}
-	namespace := os.Getenv("NAMESPACE")
+	namespace := os.Getenv("Namespace")
 	if namespace == "" {
-		namespace = NAMESPACE
+		namespace = Namespace
 	}
 
-	e = NewE2E(namespace, kubeconfig, MODULE_URL, []string{
+	e = NewE2E(namespace, kubeconfig, ModuleURL, []string{
 		"Module",
 		"State",
 		"Execution",
@@ -116,7 +116,7 @@ func TestCreateJobComplete(t *testing.T) {
 	var cm *v1.ConfigMap
 	err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
 		var err error
-		cm, err = e.cs.CoreV1().ConfigMaps(e.namespace).Get(e.ctx, TEST_CONFIG_MAP, v13.GetOptions{})
+		cm, err = e.cs.CoreV1().ConfigMaps(e.namespace).Get(e.ctx, TestConfigMap, v13.GetOptions{})
 		if err == nil {
 			return true, nil
 		}
@@ -196,7 +196,7 @@ func TestDeleteJobComplete(t *testing.T) {
 	var configMapDeleted = false
 	err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
 		var err error
-		_, err = e.cs.CoreV1().ConfigMaps(e.namespace).Get(e.ctx, TEST_CONFIG_MAP, v13.GetOptions{})
+		_, err = e.cs.CoreV1().ConfigMaps(e.namespace).Get(e.ctx, TestConfigMap, v13.GetOptions{})
 		if errors.IsNotFound(err) {
 			configMapDeleted = true
 			return true, nil

@@ -11,7 +11,7 @@ import (
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (h *handler) gatherInput(obj *v1.State) (*Input, bool, error) {
+func (h *Handler) gatherInput(obj *v1.State) (*Input, bool, error) {
 	var (
 		ns   = obj.Namespace
 		spec = obj.Spec
@@ -61,7 +61,7 @@ func (h *handler) gatherInput(obj *v1.State) (*Input, bool, error) {
 	}, true, nil
 }
 
-func (h *handler) getSecrets(ns string, spec v1.StateSpec) ([]*coreV1.Secret, bool, error) {
+func (h *Handler) getSecrets(ns string, spec v1.StateSpec) ([]*coreV1.Secret, bool, error) {
 	var secrets []*coreV1.Secret
 
 	for _, name := range spec.Variables.SecretNames {
@@ -78,7 +78,7 @@ func (h *handler) getSecrets(ns string, spec v1.StateSpec) ([]*coreV1.Secret, bo
 	return secrets, true, nil
 }
 
-func (h *handler) getConfigs(ns string, spec v1.StateSpec) ([]*coreV1.ConfigMap, bool, error) {
+func (h *Handler) getConfigs(ns string, spec v1.StateSpec) ([]*coreV1.ConfigMap, bool, error) {
 	var configMaps []*coreV1.ConfigMap
 
 	for _, name := range spec.Variables.ConfigNames {
@@ -95,7 +95,7 @@ func (h *handler) getConfigs(ns string, spec v1.StateSpec) ([]*coreV1.ConfigMap,
 	return configMaps, true, nil
 }
 
-func (h *handler) getExecutions(ns string, spec v1.StateSpec) (map[string]string, bool, error) {
+func (h *Handler) getExecutions(ns string, spec v1.StateSpec) (map[string]string, bool, error) {
 	result := map[string]string{}
 	for dataName, execName := range spec.Data {
 		state, err := h.states.Get(ns, execName, metaV1.GetOptions{})
@@ -115,7 +115,7 @@ func (h *handler) getExecutions(ns string, spec v1.StateSpec) (map[string]string
 	return result, true, nil
 }
 
-func (h *handler) getEnvVars(ns string, spec v1.StateSpec) ([]coreV1.EnvVar, bool, error) {
+func (h *Handler) getEnvVars(ns string, spec v1.StateSpec) ([]coreV1.EnvVar, bool, error) {
 	result := []coreV1.EnvVar{}
 
 	for _, name := range spec.Variables.EnvSecretNames {

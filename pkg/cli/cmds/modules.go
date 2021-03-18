@@ -97,9 +97,9 @@ func createModule(c *cli.Context) error {
 	}
 
 	moduleName := c.Args()[0]
-	gitUrl := c.Args()[1]
+	gitURL := c.Args()[1]
 
-	return doModuleCreate(namespace, kubeConfig, moduleName, gitUrl)
+	return doModuleCreate(namespace, kubeConfig, moduleName, gitURL)
 }
 
 func deleteModule(c *cli.Context) error {
