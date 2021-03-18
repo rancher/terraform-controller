@@ -3,7 +3,8 @@ package state
 import (
 	"context"
 	"fmt"
-	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
+
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 	batchv1 "github.com/rancher/wrangler/pkg/generated/controllers/batch/v1"
 	corev1 "github.com/rancher/wrangler/pkg/generated/controllers/core/v1"
@@ -32,8 +33,8 @@ func NewHandler(
 	configMaps corev1.ConfigMapController,
 	serviceAccounts corev1.ServiceAccountController,
 	jobs batchv1.JobController,
-) *handler {
-	return &handler{
+) *Handler {
+	return &Handler{
 		ctx:                 ctx,
 		modules:             modules,
 		states:              states,
@@ -47,7 +48,7 @@ func NewHandler(
 	}
 }
 
-type handler struct {
+type Handler struct {
 	ctx                 context.Context
 	modules             tfv1.ModuleController
 	states              tfv1.StateController
@@ -60,7 +61,7 @@ type handler struct {
 	jobs                batchv1.JobController
 }
 
-func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
+func (h *Handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 	logrus.Debugf("State On Change Handler %s", key)
 	if obj == nil {
 		return nil, nil
@@ -143,7 +144,7 @@ func (h *handler) OnChange(key string, obj *v1.State) (*v1.State, error) {
 	return h.states.Update(obj)
 }
 
-func (h *handler) OnRemove(key string, obj *v1.State) (*v1.State, error) {
+func (h *Handler) OnRemove(key string, obj *v1.State) (*v1.State, error) {
 	logrus.Debugf("State On Remove Handler %s", key)
 	input, ok, err := h.gatherInput(obj)
 	if err != nil {

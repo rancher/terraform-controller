@@ -14,21 +14,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func NewHandler(ctx context.Context, modules tfv1.ModuleController, secrets corev1.SecretController) *handler {
-	return &handler{
+func NewHandler(ctx context.Context, modules tfv1.ModuleController, secrets corev1.SecretController) *Handler {
+	return &Handler{
 		ctx:     ctx,
 		modules: modules,
 		secrets: secrets,
 	}
 }
 
-type handler struct {
+type Handler struct {
 	ctx     context.Context
 	modules tfv1.ModuleController
 	secrets corev1.SecretController
 }
 
-func (h *handler) OnChange(key string, module *v1.Module) (*v1.Module, error) {
+func (h *Handler) OnChange(key string, module *v1.Module) (*v1.Module, error) {
 	if module == nil {
 		return nil, nil
 	}
@@ -49,12 +49,12 @@ func (h *handler) OnChange(key string, module *v1.Module) (*v1.Module, error) {
 	return h.modules.Update(module)
 }
 
-func (h *handler) OnRemove(key string, module *v1.Module) (*v1.Module, error) {
+func (h *Handler) OnRemove(key string, module *v1.Module) (*v1.Module, error) {
 	//nothing to do here
 	return module, nil
 }
 
-func (h *handler) updateHash(module *v1.Module, hash string) (*v1.Module, error) {
+func (h *Handler) updateHash(module *v1.Module, hash string) (*v1.Module, error) {
 	module = module.DeepCopy()
 	module.Status.Content = module.Spec.ModuleContent
 	module.Status.ContentHash = hash
@@ -64,7 +64,7 @@ func (h *handler) updateHash(module *v1.Module, hash string) (*v1.Module, error)
 	return h.modules.Update(module)
 }
 
-func (h *handler) updateCommit(key string, module *v1.Module) (*v1.Module, error) {
+func (h *Handler) updateCommit(key string, module *v1.Module) (*v1.Module, error) {
 	branch := module.Spec.Git.Branch
 	tag := module.Spec.Git.Tag
 
@@ -96,7 +96,7 @@ func (h *handler) updateCommit(key string, module *v1.Module) (*v1.Module, error
 	return h.modules.Update(module)
 }
 
-func (h *handler) getAuth(ns string, spec v1.ModuleSpec) (git.Auth, error) {
+func (h *Handler) getAuth(ns string, spec v1.ModuleSpec) (git.Auth, error) {
 	auth := git.Auth{}
 	name := spec.Git.SecretName
 

@@ -30,7 +30,7 @@ type Input struct {
 }
 
 // deployCreate creates all resources for the job to run terraform create and returns the run name
-func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, error) {
+func (h *Handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, error) {
 	runHash := createRunHash(state, input, ActionCreate)
 	jsonVars, err := json.Marshal(getCombinedVars(state, input))
 	if err != nil {
@@ -95,7 +95,7 @@ func (h *handler) deployCreate(state *v1.State, input *Input) (*v1.Execution, er
 }
 
 // deployCreate creates all resources for the job to run terraform destroy
-func (h *handler) deployDestroy(state *v1.State, input *Input) (*v1.Execution, error) {
+func (h *Handler) deployDestroy(state *v1.State, input *Input) (*v1.Execution, error) {
 	runHash := createRunHash(state, input, ActionDestroy)
 	jsonVars, err := json.Marshal(getCombinedVars(state, input))
 	if err != nil {
@@ -151,7 +151,7 @@ func (h *handler) deployDestroy(state *v1.State, input *Input) (*v1.Execution, e
 	return exec, nil
 }
 
-func (h *handler) createExecution(
+func (h *Handler) createExecution(
 	or []metaV1.OwnerReference,
 	state *v1.State,
 	input *Input,
@@ -188,7 +188,7 @@ func (h *handler) createExecution(
 	return h.executions.Update(exec)
 }
 
-func (h *handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name string, execution *v1.State, vars []byte) (*coreV1.Secret, error) {
+func (h *Handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name string, execution *v1.State, vars []byte) (*coreV1.Secret, error) {
 	secretData := map[string][]byte{
 		"varFile": vars,
 	}
@@ -213,7 +213,7 @@ func (h *handler) createSecretForVariablesFile(or []metaV1.OwnerReference, name 
 	return s, nil
 }
 
-func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, runHash, action, sa, namespace string, nodeSelector map[string]string) (*batchV1.Job, error) {
+func (h *Handler) createJob(or []metaV1.OwnerReference, input *Input, runName, runHash, action, sa, namespace string, nodeSelector map[string]string) (*batchV1.Job, error) {
 	createEnvForJob(input, action, runName, namespace)
 
 	meta := metaV1.ObjectMeta{
@@ -258,7 +258,7 @@ func (h *handler) createJob(or []metaV1.OwnerReference, input *Input, runName, r
 	return job, nil
 }
 
-func (h *handler) createServiceAccount(name, namespace string) (*coreV1.ServiceAccount, error) {
+func (h *Handler) createServiceAccount(name, namespace string) (*coreV1.ServiceAccount, error) {
 	meta := metaV1.ObjectMeta{
 		Name:      "sa-" + name,
 		Namespace: namespace,
@@ -277,7 +277,7 @@ func (h *handler) createServiceAccount(name, namespace string) (*coreV1.ServiceA
 	return sa, nil
 }
 
-func (h *handler) createClusterRoleBinding(or []metaV1.OwnerReference, name, role, sa, namespace string) (*rbacV1.ClusterRoleBinding, error) {
+func (h *Handler) createClusterRoleBinding(or []metaV1.OwnerReference, name, role, sa, namespace string) (*rbacV1.ClusterRoleBinding, error) {
 	meta := metaV1.ObjectMeta{
 		Name:            "crb-" + name,
 		OwnerReferences: or,
@@ -310,7 +310,7 @@ func (h *handler) createClusterRoleBinding(or []metaV1.OwnerReference, name, rol
 }
 
 // updateOwnerReference ties the passed in objs to a job
-func (h *handler) updateOwnerReference(job *batchV1.Job, objs []interface{}, namespace string) error {
+func (h *Handler) updateOwnerReference(job *batchV1.Job, objs []interface{}, namespace string) error {
 	or := []metaV1.OwnerReference{
 		{
 			APIVersion: "batch/v1",

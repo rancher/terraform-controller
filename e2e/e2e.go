@@ -24,7 +24,7 @@ type E2E struct {
 	cfg        *rest.Config
 	kubeconfig string
 	namespace  string
-	module_url string
+	moduleURL  string
 	crds       []crd.CRD
 }
 
@@ -50,7 +50,7 @@ func NewE2E(namespace, kubeconfig, module string, crdsNames []string) *E2E {
 		cfg:        cfg,
 		kubeconfig: kubeconfig,
 		namespace:  namespace,
-		module_url: module,
+		moduleURL:  module,
 		crds:       crds,
 	}
 }
@@ -229,7 +229,7 @@ func (e *E2E) getModule() *tfv1.Module {
 		Spec: tfv1.ModuleSpec{
 			ModuleContent: tfv1.ModuleContent{
 				Git: tfv1.GitLocation{
-					URL: e.module_url,
+					URL: e.moduleURL,
 				},
 			},
 		},

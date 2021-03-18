@@ -1,6 +1,6 @@
 module github.com/rancher/terraform-controller
 
-go 1.15
+go 1.16
 
 require (
 	github.com/docker/go-units v0.4.0

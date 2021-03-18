@@ -3,12 +3,12 @@ package execution
 import (
 	"context"
 
-	"github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	tfv1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
 )
 
-func NewHandler(ctx context.Context, executions tfv1.ExecutionController, states tfv1.StateController, modules tfv1.ModuleController) *handler {
-	return &handler{
+func NewHandler(ctx context.Context, executions tfv1.ExecutionController, states tfv1.StateController, modules tfv1.ModuleController) *Handler {
+	return &Handler{
 		ctx:        ctx,
 		states:     states,
 		executions: executions,
@@ -16,14 +16,14 @@ func NewHandler(ctx context.Context, executions tfv1.ExecutionController, states
 	}
 }
 
-type handler struct {
+type Handler struct {
 	ctx        context.Context
 	executions tfv1.ExecutionController
 	states     tfv1.StateController
 	modules    tfv1.ModuleController
 }
 
-func (h *handler) OnChange(key string, execution *v1.Execution) (*v1.Execution, error) {
+func (h *Handler) OnChange(key string, execution *v1.Execution) (*v1.Execution, error) {
 	if execution == nil {
 		return nil, nil
 	}
@@ -33,6 +33,6 @@ func (h *handler) OnChange(key string, execution *v1.Execution) (*v1.Execution, 
 	return execution, nil
 }
 
-func (h *handler) OnRemove(key string, execution *v1.Execution) (*v1.Execution, error) {
+func (h *Handler) OnRemove(key string, execution *v1.Execution) (*v1.Execution, error) {
 	return execution, nil
 }
