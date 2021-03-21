@@ -3,6 +3,7 @@
 /.trash-cache
 /bin
 /dist
+/build
 *.swp
 .idea
 tffy

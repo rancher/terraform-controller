@@ -1,0 +1,7 @@
+#terraform-controller helm chart values
+
+image:
+  repository: rancher/terraform-controller 
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "${VERSION}"
+
