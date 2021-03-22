@@ -87,10 +87,11 @@ type StateSpec struct {
 }
 
 type StateStatus struct {
-	Conditions    []genericcondition.GenericCondition `json:"conditions,omitempty"`
-	LastRunHash   string                              `json:"lastRunHash,omitempty"`
-	ExecutionName string                              `json:"executionName,omitempty"`
-	StatePlanName string                              `json:"executionPlanName,omitempty"`
+	Conditions      []genericcondition.GenericCondition `json:"conditions,omitempty"`
+	RefreshSchedule metav1.Time                         `json:"schedule,omitempty"`
+	LastRunHash     string                              `json:"lastRunHash,omitempty"`
+	ExecutionName   string                              `json:"executionName,omitempty"`
+	StatePlanName   string                              `json:"executionPlanName,omitempty"`
 }
 
 // +genclient
