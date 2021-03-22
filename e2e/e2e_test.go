@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 		namespace = Namespace
 	}
 
-	e = NewE2E(name, namespace, kubeconfig, ModuleURL, []string{
+	e = NewE2E(Name, namespace, kubeconfig, ModuleURL, []string{
 		"Module",
 		"State",
 		"Execution",

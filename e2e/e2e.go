@@ -25,7 +25,7 @@ type E2E struct {
 	kubeconfig    string
 	ctrlNamespace string
 	namespace     string
-	moduleUrl     string
+	moduleURL     string
 	name          string
 	crds          []crd.CRD
 }
@@ -54,7 +54,7 @@ func NewE2E(name, namespace, kubeconfig, module string, crdsNames []string) *E2E
 		ctrlNamespace: name,
 		namespace:     namespace,
 		name:          name,
-		moduleUrl:     module,
+		moduleURL:     module,
 		crds:          crds,
 	}
 }
