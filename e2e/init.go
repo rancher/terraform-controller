@@ -25,6 +25,10 @@ func (e *E2E) initialize() error {
 		return err
 	}
 
+	_, err = e.cs.CoreV1().Namespaces().Create(e.ctx, e.getCtrlNs(), v13.CreateOptions{})
+	if err != nil {
+		return err
+	}
 	_, err = e.cs.CoreV1().Namespaces().Create(e.ctx, e.getNs(), v13.CreateOptions{})
 	if err != nil {
 		return err
@@ -34,13 +38,13 @@ func (e *E2E) initialize() error {
 		return err
 	}
 
-	_, err = e.cs.CoreV1().ServiceAccounts(e.namespace).Create(e.ctx, e.getSa(), v13.CreateOptions{})
+	_, err = e.cs.CoreV1().ServiceAccounts(e.ctrlNamespace).Create(e.ctx, e.getSa(), v13.CreateOptions{})
 	if err != nil {
 		return err
 	}
 
 	err = wait.Poll(time.Second, 15*time.Second, func() (bool, error) {
-		_, err := e.cs.CoreV1().ServiceAccounts(e.namespace).Get(e.ctx, e.namespace, v13.GetOptions{})
+		_, err := e.cs.CoreV1().ServiceAccounts(e.ctrlNamespace).Get(e.ctx, e.name, v13.GetOptions{})
 		if err == nil {
 			return true, nil
 		}
@@ -67,15 +71,22 @@ func (e *E2E) getNs() *v12.Namespace {
 		},
 	}
 }
+func (e *E2E) getCtrlNs() *v12.Namespace {
+	return &v12.Namespace{
+		ObjectMeta: v13.ObjectMeta{
+			Name: e.name,
+		},
+	}
+}
 
 func (e *E2E) getSa() *v12.ServiceAccount {
 	return &v12.ServiceAccount{
 		ObjectMeta: v13.ObjectMeta{
-			Name:      e.namespace,
-			Namespace: e.namespace,
+			Name:      e.name,
+			Namespace: e.ctrlNamespace,
 			Labels: map[string]string{
 				"apps.kubernetes.io/component": "controller",
-				"apps.kubernetes.io/name":      e.namespace,
+				"apps.kubernetes.io/name":      e.name,
 			},
 		},
 	}
@@ -84,10 +95,10 @@ func (e *E2E) getSa() *v12.ServiceAccount {
 func (e *E2E) getCrb() *v1.ClusterRoleBinding {
 	return &v1.ClusterRoleBinding{
 		ObjectMeta: v13.ObjectMeta{
-			Name: e.namespace,
+			Name: e.name,
 			Labels: map[string]string{
 				"apps.kubernetes.io/component": "controller",
-				"apps.kubernetes.io/name":      e.namespace,
+				"apps.kubernetes.io/name":      e.name,
 			},
 		},
 		RoleRef: v1.RoleRef{
@@ -98,8 +109,8 @@ func (e *E2E) getCrb() *v1.ClusterRoleBinding {
 		Subjects: []v1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      e.namespace,
-				Namespace: e.namespace,
+				Name:      e.name,
+				Namespace: e.ctrlNamespace,
 			},
 		},
 	}

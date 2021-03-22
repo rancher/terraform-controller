@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	Namespace     = "terraform-controller"
+	Name          = "terraform-controller"
+	Namespace     = "app"
 	ModuleURL     = "https://github.com/luthermonson/terraform-controller-test-module"
 	TestConfigMap = "test-config-map"
 )
@@ -35,7 +36,7 @@ func TestMain(m *testing.M) {
 		namespace = Namespace
 	}
 
-	e = NewE2E(namespace, kubeconfig, ModuleURL, []string{
+	e = NewE2E(Name, namespace, kubeconfig, ModuleURL, []string{
 		"Module",
 		"State",
 		"Execution",

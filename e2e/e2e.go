@@ -19,16 +19,18 @@ import (
 )
 
 type E2E struct {
-	ctx        context.Context
-	cs         *kubernetes.Clientset
-	cfg        *rest.Config
-	kubeconfig string
-	namespace  string
-	moduleURL  string
-	crds       []crd.CRD
+	ctx           context.Context
+	cs            *kubernetes.Clientset
+	cfg           *rest.Config
+	kubeconfig    string
+	ctrlNamespace string
+	namespace     string
+	moduleURL     string
+	name          string
+	crds          []crd.CRD
 }
 
-func NewE2E(namespace, kubeconfig, module string, crdsNames []string) *E2E {
+func NewE2E(name, namespace, kubeconfig, module string, crdsNames []string) *E2E {
 	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		logrus.Fatalf("Error building kubeconfig: %s", err.Error())
@@ -45,13 +47,15 @@ func NewE2E(namespace, kubeconfig, module string, crdsNames []string) *E2E {
 	}
 
 	return &E2E{
-		ctx:        signals.SetupSignalHandler(context.Background()),
-		cs:         cs,
-		cfg:        cfg,
-		kubeconfig: kubeconfig,
-		namespace:  namespace,
-		moduleURL:  module,
-		crds:       crds,
+		ctx:           signals.SetupSignalHandler(context.Background()),
+		cs:            cs,
+		cfg:           cfg,
+		kubeconfig:    kubeconfig,
+		ctrlNamespace: name,
+		namespace:     namespace,
+		name:          name,
+		moduleURL:     module,
+		crds:          crds,
 	}
 }
 
@@ -215,7 +219,7 @@ func (e *E2E) getConfigMapEnv() *v1.ConfigMap {
 			Namespace: e.namespace,
 		},
 		Data: map[string]string{
-			"test_config_map_env": e.namespace,
+			"TF_VAR_test_config_map_env": e.namespace,
 		},
 	}
 }
