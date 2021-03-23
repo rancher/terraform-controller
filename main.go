@@ -53,6 +53,18 @@ func main() {
 			Usage:  "Address to run the REST api",
 		},
 		cli.StringFlag{
+			Name:   "api-cert-file",
+			EnvVar: "API_CERT_FILE",
+			Value:  "",
+			Usage:  "A pem cert file for TLS for the REST API, leave blank for no TLS",
+		},
+		cli.StringFlag{
+			Name:   "api-key-file",
+			EnvVar: "API_KEY_FILE",
+			Value:  "",
+			Usage:  "A pem key file for TLS for the REST API, leave blank for no TLS",
+		},
+		cli.StringFlag{
 			Name:   "kubeconfig",
 			EnvVar: "KUBECONFIG",
 			Value:  "${HOME}/.kube/config",
@@ -114,7 +126,10 @@ func startController(ctx context.Context, c *cli.Context) {
 }
 
 func startAPI(ctx context.Context, c *cli.Context) {
-	if err := api.Start(ctx, c.String("api-address")); err != nil {
+	if err := api.Start(ctx,
+		c.String("api-address"),
+		c.String("api-cert-file"),
+		c.String("api-key-file")); err != nil {
 		logrus.Fatalf("failed to start api: %s", err.Error())
 	}
 }
