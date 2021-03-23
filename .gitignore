@@ -9,3 +9,5 @@
 tffy
 kubeconfig.yml
 .tls
+.terraform
+.terraform.lock.hcl
