@@ -8,3 +8,4 @@
 .idea
 tffy
 kubeconfig.yml
+.tls
