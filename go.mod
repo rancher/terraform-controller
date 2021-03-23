@@ -7,6 +7,8 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
+	github.com/google/jsonapi v0.0.0-20210306203318-b10ff4bf785b
+	github.com/hashicorp/go-tfe v0.12.1
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/lasso v0.0.0-20200905045615-7fcb07d6a20b
