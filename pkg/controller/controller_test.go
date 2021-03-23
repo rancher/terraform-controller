@@ -1,4 +1,4 @@
-package terraform
+package controller
 
 import (
 	"testing"

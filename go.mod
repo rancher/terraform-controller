@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/docker/go-units v0.4.0
+	github.com/gin-gonic/gin v1.6.3
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect

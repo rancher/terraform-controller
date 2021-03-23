@@ -1,6 +1,6 @@
 apiVersion: v2
-name: terraform-controller 
-description: Terraform controller Helm Chart 
+name: terraform-controller
+description: Terraform controller Helm Chart
 
 # A chart can be either an 'application' or a 'library' chart.
 #

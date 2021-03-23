@@ -8,17 +8,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
-	"github.com/rancher/terraform-controller/pkg/terraform"
-	"github.com/rancher/wrangler/pkg/generated/controllers/batch"
-	"github.com/rancher/wrangler/pkg/generated/controllers/core"
-	"github.com/rancher/wrangler/pkg/generated/controllers/rbac"
+	"github.com/rancher/terraform-controller/pkg/api"
+	"github.com/rancher/terraform-controller/pkg/controller"
 	"github.com/rancher/wrangler/pkg/resolvehome"
 	"github.com/rancher/wrangler/pkg/signals"
-	"github.com/rancher/wrangler/pkg/start"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -30,15 +25,32 @@ func main() {
 	app.Name = "terraform-controller"
 	app.Version = VERSION
 	app.Flags = []cli.Flag{
-
 		cli.IntFlag{
 			Name:   "threads",
 			EnvVar: "THREADS",
 			Value:  2,
+			Usage:  "Set the threadiness of the kubernetes controller",
 		},
 		cli.BoolFlag{
 			Name:   "debug",
 			EnvVar: "DEBUG",
+			Usage:  "Enables debug output",
+		},
+		cli.BoolFlag{
+			Name:   "enable-api",
+			EnvVar: "API",
+			Usage:  "Enables the remote backend api functionality",
+		},
+		cli.BoolTFlag{
+			Name:   "enable-controller",
+			EnvVar: "CONTROLLER",
+			Usage:  "Enables the kubernetes controller functionality",
+		},
+		cli.StringFlag{
+			Name:   "api-address",
+			EnvVar: "API_ADDRESS",
+			Value:  "0.0.0.0:8080",
+			Usage:  "Address to run the REST api",
 		},
 		cli.StringFlag{
 			Name:   "kubeconfig",
@@ -49,6 +61,7 @@ func main() {
 			Name:   "namespace",
 			EnvVar: "NAMESPACE",
 			Value:  "default",
+			Usage:  "The namespace to run the kubernetes controller in",
 		},
 		cli.StringFlag{
 			Name:   "masterurl",
@@ -64,15 +77,25 @@ func main() {
 }
 
 func run(c *cli.Context) {
-
 	if c.Bool("debug") {
 		logrus.SetLevel(logrus.DebugLevel)
 		logrus.SetReportCaller(true)
 	}
 
-	logrus.Info("Starting Terraform Controller")
-	kubeconfig, err := resolvehome.Resolve(c.String("kubeconfig"))
+	ctx := signals.SetupSignalHandler(context.Background())
 
+	if c.BoolT("enable-controller") {
+		go startController(ctx, c)
+	}
+	if c.Bool("enable-api") {
+		go startAPI(ctx, c)
+	}
+
+	<-ctx.Done()
+}
+
+func startController(ctx context.Context, c *cli.Context) {
+	kubeconfig, err := resolvehome.Resolve(c.String("kubeconfig"))
 	if err != nil {
 		logrus.Info("Resolving home dir failed.")
 	}
@@ -85,50 +108,13 @@ func run(c *cli.Context) {
 	masterurl := c.String("masterurl")
 	ns := c.String("namespace")
 
-	logrus.Printf("Booting Terraform Controller, namespace: %s", ns)
-
-	ctx := signals.SetupSignalHandler(context.Background())
-
-	cfg, err := clientcmd.BuildConfigFromFlags(masterurl, kubeconfig)
-	if err != nil {
-		logrus.Fatalf("Error building kubeconfig: %s", err.Error())
+	if err := controller.Start(ctx, kubeconfig, ns, masterurl, threadiness); err != nil {
+		logrus.Fatalf("failed to start controller: %s", err.Error())
 	}
+}
 
-	tfFactory, err := terraformcontroller.NewFactoryFromConfigWithNamespace(cfg, ns)
-	if err != nil {
-		logrus.Fatalf("Error building terraform controllers: %s", err.Error())
+func startAPI(ctx context.Context, c *cli.Context) {
+	if err := api.Start(ctx, c.String("api-address")); err != nil {
+		logrus.Fatalf("failed to start api: %s", err.Error())
 	}
-
-	coreFactory, err := core.NewFactoryFromConfigWithNamespace(cfg, ns)
-	if err != nil {
-		logrus.Fatalf("Error building core controllers: %s", err.Error())
-	}
-
-	rbacFactory, err := rbac.NewFactoryFromConfigWithNamespace(cfg, ns)
-	if err != nil {
-		logrus.Fatalf("Error building rbac controllers: %s", err.Error())
-	}
-
-	batchFactory, err := batch.NewFactoryFromConfigWithNamespace(cfg, ns)
-	if err != nil {
-		logrus.Fatalf("Error building rbac controllers: %s", err.Error())
-	}
-
-	terraform.Register(ctx,
-		tfFactory.Terraformcontroller().V1().Module(),
-		tfFactory.Terraformcontroller().V1().State(),
-		tfFactory.Terraformcontroller().V1().Execution(),
-		rbacFactory.Rbac().V1().ClusterRole(),
-		rbacFactory.Rbac().V1().ClusterRoleBinding(),
-		coreFactory.Core().V1().Secret(),
-		coreFactory.Core().V1().ConfigMap(),
-		coreFactory.Core().V1().ServiceAccount(),
-		batchFactory.Batch().V1().Job(),
-	)
-
-	if err := start.All(ctx, threadiness, tfFactory, coreFactory, rbacFactory, batchFactory); err != nil {
-		logrus.Fatalf("Error starting: %s", err.Error())
-	}
-
-	<-ctx.Done()
 }
