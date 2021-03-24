@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"io"
 
+	b64 "encoding/base64"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/hashicorp/go-tfe"
 	"github.com/rancher/terraform-controller/pkg/types"
 
-	//"github.com/sirupsen/logrus"
 	"compress/gzip"
+
+	"github.com/sirupsen/logrus"
 
 	"k8s.io/utils/pointer"
 
@@ -31,6 +34,7 @@ func Register(r *gin.Engine, controllers *types.Controllers) error {
 	r.GET("/api/v2/download/:workspace/state", stateDownload)
 	r.POST("/api/v2/workspaces/:workspace/actions/lock", stateLock)
 	r.POST("/api/v2/workspaces/:workspace/actions/unlock", stateUnlock)
+	r.POST("/api/v2/workspaces/:workspace/state-versions", stateUpdate)
 
 	return nil
 }
@@ -95,6 +99,22 @@ func state(c *gin.Context) {
 	jsonapi.MarshalPayload(c.Writer, stateVersion)
 }
 
+func stateUpdate(c *gin.Context) {
+	newState := new(tfe.StateVersionCreateOptions)
+	err := jsonapi.UnmarshalPayload(c.Request.Body, newState)
+	if err != nil {
+		logrus.Error(err.Error())
+	}
+	secret, _ := cs.Secret.Get("default", "tfstate-default-my-state", metav1.GetOptions{})
+	secretData, _ := b64.StdEncoding.DecodeString(*newState.State)
+	gzippedData, _ := gzipData(secretData)
+	secret.Data["tfstate"] = gzippedData
+	cs.Secret.Update(secret)
+	stateVersion := tfe.StateVersion{}
+	jsonapi.MarshalPayload(c.Writer, stateVersion)
+
+}
+
 func stateDownload(c *gin.Context) {
 	c.Header("Content-Type", jsonapi.MediaType)
 	//	ws := c.Param("workspace")
@@ -118,4 +138,26 @@ func gunzip(data []byte) (string, error) {
 	}
 
 	return string(resB.Bytes()), nil
+}
+
+func gzipData(data []byte) (compressedData []byte, err error) {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+
+	_, err = gz.Write(data)
+	if err != nil {
+		return
+	}
+
+	if err = gz.Flush(); err != nil {
+		return
+	}
+
+	if err = gz.Close(); err != nil {
+		return
+	}
+
+	compressedData = b.Bytes()
+
+	return
 }
