@@ -10,23 +10,20 @@ import (
 	"log"
 	"os"
 
-	"github.com/rancher/wrangler/pkg/start"
-
-	"github.com/rancher/terraform-controller/pkg/types"
-
+	"github.com/rancher/terraform-controller/pkg/api"
+	"github.com/rancher/terraform-controller/pkg/controller"
 	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
+	"github.com/rancher/terraform-controller/pkg/types"
 	"github.com/rancher/wrangler/pkg/generated/controllers/batch"
 	"github.com/rancher/wrangler/pkg/generated/controllers/core"
 	"github.com/rancher/wrangler/pkg/generated/controllers/rbac"
-
-	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/rancher/terraform-controller/pkg/api"
-	"github.com/rancher/terraform-controller/pkg/controller"
 	"github.com/rancher/wrangler/pkg/resolvehome"
 	"github.com/rancher/wrangler/pkg/signals"
+	"github.com/rancher/wrangler/pkg/start"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -151,6 +148,55 @@ func loadControllers(c *cli.Context) (*types.Controllers, *types.Factories, erro
 		return nil, nil, fmt.Errorf("error building kubeconfig: %s", err.Error())
 	}
 
+	if ns != "" {
+		return withNamespace(cfg, ns)
+	}
+
+	return withoutNamespace(cfg)
+}
+
+func withoutNamespace(cfg *rest.Config) (*types.Controllers, *types.Factories, error) {
+	logrus.Debug("building factories without namespace")
+	tfFactory, err := terraformcontroller.NewFactoryFromConfig(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building controller controllers: %s", err.Error())
+	}
+
+	coreFactory, err := core.NewFactoryFromConfig(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building core controllers: %s", err.Error())
+	}
+
+	rbacFactory, err := rbac.NewFactoryFromConfig(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building rbac controllers: %s", err.Error())
+	}
+
+	batchFactory, err := batch.NewFactoryFromConfig(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building rbac controllers: %s", err.Error())
+	}
+
+	return &types.Controllers{
+			Module:             tfFactory.Terraformcontroller().V1().Module(),
+			State:              tfFactory.Terraformcontroller().V1().State(),
+			Execution:          tfFactory.Terraformcontroller().V1().Execution(),
+			ClusterRole:        rbacFactory.Rbac().V1().ClusterRole(),
+			ClusterRoleBinding: rbacFactory.Rbac().V1().ClusterRoleBinding(),
+			Secret:             coreFactory.Core().V1().Secret(),
+			ConfigMap:          coreFactory.Core().V1().ConfigMap(),
+			ServiceAccount:     coreFactory.Core().V1().ServiceAccount(),
+			Job:                batchFactory.Batch().V1().Job(),
+		}, &types.Factories{
+			Tf:    tfFactory,
+			Core:  coreFactory,
+			Rbac:  rbacFactory,
+			Batch: batchFactory,
+		}, nil
+}
+
+func withNamespace(cfg *rest.Config, ns string) (*types.Controllers, *types.Factories, error) {
+	logrus.Debugf("building factories with namespace %s", ns)
 	tfFactory, err := terraformcontroller.NewFactoryFromConfigWithNamespace(cfg, ns)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error building controller controllers: %s", err.Error())
