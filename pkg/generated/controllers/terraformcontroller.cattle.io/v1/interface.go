@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Rancher Labs, Inc.
+Copyright 2021 Rancher Labs, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,9 @@ func init() {
 type Interface interface {
 	Execution() ExecutionController
 	Module() ModuleController
+	Organization() OrganizationController
 	State() StateController
+	Workspace() WorkspaceController
 }
 
 func New(controllerFactory controller.SharedControllerFactory) Interface {
@@ -51,6 +53,12 @@ func (c *version) Execution() ExecutionController {
 func (c *version) Module() ModuleController {
 	return NewModuleController(schema.GroupVersionKind{Group: "terraformcontroller.cattle.io", Version: "v1", Kind: "Module"}, "modules", true, c.controllerFactory)
 }
+func (c *version) Organization() OrganizationController {
+	return NewOrganizationController(schema.GroupVersionKind{Group: "terraformcontroller.cattle.io", Version: "v1", Kind: "Organization"}, "organizations", true, c.controllerFactory)
+}
 func (c *version) State() StateController {
 	return NewStateController(schema.GroupVersionKind{Group: "terraformcontroller.cattle.io", Version: "v1", Kind: "State"}, "states", true, c.controllerFactory)
+}
+func (c *version) Workspace() WorkspaceController {
+	return NewWorkspaceController(schema.GroupVersionKind{Group: "terraformcontroller.cattle.io", Version: "v1", Kind: "Workspace"}, "workspaces", true, c.controllerFactory)
 }

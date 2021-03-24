@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Rancher Labs, Inc.
+Copyright 2021 Rancher Labs, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,8 +36,16 @@ func (c *FakeTerraformcontrollerV1) Modules(namespace string) v1.ModuleInterface
 	return &FakeModules{c, namespace}
 }
 
+func (c *FakeTerraformcontrollerV1) Organizations(namespace string) v1.OrganizationInterface {
+	return &FakeOrganizations{c, namespace}
+}
+
 func (c *FakeTerraformcontrollerV1) States(namespace string) v1.StateInterface {
 	return &FakeStates{c, namespace}
+}
+
+func (c *FakeTerraformcontrollerV1) Workspaces(namespace string) v1.WorkspaceInterface {
+	return &FakeWorkspaces{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

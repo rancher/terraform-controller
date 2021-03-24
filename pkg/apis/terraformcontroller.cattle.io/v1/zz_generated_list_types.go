@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Rancher Labs, Inc.
+Copyright 2021 Rancher Labs, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -70,6 +70,40 @@ type ExecutionList struct {
 
 func NewExecution(namespace, name string, obj Execution) *Execution {
 	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("Execution").ToAPIVersionAndKind()
+	obj.Name = name
+	obj.Namespace = namespace
+	return &obj
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// OrganizationList is a list of Organization resources
+type OrganizationList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Organization `json:"items"`
+}
+
+func NewOrganization(namespace, name string, obj Organization) *Organization {
+	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("Organization").ToAPIVersionAndKind()
+	obj.Name = name
+	obj.Namespace = namespace
+	return &obj
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// WorkspaceList is a list of Workspace resources
+type WorkspaceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Workspace `json:"items"`
+}
+
+func NewWorkspace(namespace, name string, obj Workspace) *Workspace {
+	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("Workspace").ToAPIVersionAndKind()
 	obj.Name = name
 	obj.Namespace = namespace
 	return &obj
