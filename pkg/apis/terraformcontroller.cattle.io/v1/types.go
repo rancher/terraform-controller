@@ -125,3 +125,42 @@ type ExecutionStatus struct {
 	ApplyOutput   string                              `json:"applyOutput,omitempty"`
 	Outputs       string                              `json:"outputs,omitempty"`
 }
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type Organization struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   OrganizationSpec   `json:"spec"`
+	Status OrganizationStatus `json:"status"`
+}
+
+type OrganizationSpec struct {
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
+}
+
+type OrganizationStatus struct {
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type Workspace struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   WorkspaceSpec   `json:"spec"`
+	Status WorkspaceStatus `json:"status"`
+}
+
+type WorkspaceSpec struct {
+	ID        string `json:""`
+	AutoApply bool   `json:""`
+	Name      string `json:""`
+}
+
+type WorkspaceStatus struct {
+}

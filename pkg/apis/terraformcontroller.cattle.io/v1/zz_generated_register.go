@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Rancher Labs, Inc.
+Copyright 2021 Rancher Labs, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,9 +28,11 @@ import (
 )
 
 var (
-	ExecutionResourceName = "executions"
-	ModuleResourceName    = "modules"
-	StateResourceName     = "states"
+	ExecutionResourceName    = "executions"
+	ModuleResourceName       = "modules"
+	OrganizationResourceName = "organizations"
+	StateResourceName        = "states"
+	WorkspaceResourceName    = "workspaces"
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -58,8 +60,12 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ExecutionList{},
 		&Module{},
 		&ModuleList{},
+		&Organization{},
+		&OrganizationList{},
 		&State{},
 		&StateList{},
+		&Workspace{},
+		&WorkspaceList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

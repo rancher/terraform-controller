@@ -41,51 +41,51 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-type StateHandler func(string, *v1.State) (*v1.State, error)
+type WorkspaceHandler func(string, *v1.Workspace) (*v1.Workspace, error)
 
-type StateController interface {
+type WorkspaceController interface {
 	generic.ControllerMeta
-	StateClient
+	WorkspaceClient
 
-	OnChange(ctx context.Context, name string, sync StateHandler)
-	OnRemove(ctx context.Context, name string, sync StateHandler)
+	OnChange(ctx context.Context, name string, sync WorkspaceHandler)
+	OnRemove(ctx context.Context, name string, sync WorkspaceHandler)
 	Enqueue(namespace, name string)
 	EnqueueAfter(namespace, name string, duration time.Duration)
 
-	Cache() StateCache
+	Cache() WorkspaceCache
 }
 
-type StateClient interface {
-	Create(*v1.State) (*v1.State, error)
-	Update(*v1.State) (*v1.State, error)
-	UpdateStatus(*v1.State) (*v1.State, error)
+type WorkspaceClient interface {
+	Create(*v1.Workspace) (*v1.Workspace, error)
+	Update(*v1.Workspace) (*v1.Workspace, error)
+	UpdateStatus(*v1.Workspace) (*v1.Workspace, error)
 	Delete(namespace, name string, options *metav1.DeleteOptions) error
-	Get(namespace, name string, options metav1.GetOptions) (*v1.State, error)
-	List(namespace string, opts metav1.ListOptions) (*v1.StateList, error)
+	Get(namespace, name string, options metav1.GetOptions) (*v1.Workspace, error)
+	List(namespace string, opts metav1.ListOptions) (*v1.WorkspaceList, error)
 	Watch(namespace string, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.State, err error)
+	Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.Workspace, err error)
 }
 
-type StateCache interface {
-	Get(namespace, name string) (*v1.State, error)
-	List(namespace string, selector labels.Selector) ([]*v1.State, error)
+type WorkspaceCache interface {
+	Get(namespace, name string) (*v1.Workspace, error)
+	List(namespace string, selector labels.Selector) ([]*v1.Workspace, error)
 
-	AddIndexer(indexName string, indexer StateIndexer)
-	GetByIndex(indexName, key string) ([]*v1.State, error)
+	AddIndexer(indexName string, indexer WorkspaceIndexer)
+	GetByIndex(indexName, key string) ([]*v1.Workspace, error)
 }
 
-type StateIndexer func(obj *v1.State) ([]string, error)
+type WorkspaceIndexer func(obj *v1.Workspace) ([]string, error)
 
-type stateController struct {
+type workspaceController struct {
 	controller    controller.SharedController
 	client        *client.Client
 	gvk           schema.GroupVersionKind
 	groupResource schema.GroupResource
 }
 
-func NewStateController(gvk schema.GroupVersionKind, resource string, namespaced bool, controller controller.SharedControllerFactory) StateController {
+func NewWorkspaceController(gvk schema.GroupVersionKind, resource string, namespaced bool, controller controller.SharedControllerFactory) WorkspaceController {
 	c := controller.ForResourceKind(gvk.GroupVersion().WithResource(resource), gvk.Kind, namespaced)
-	return &stateController{
+	return &workspaceController{
 		controller: c,
 		client:     c.Client(),
 		gvk:        gvk,
@@ -96,13 +96,13 @@ func NewStateController(gvk schema.GroupVersionKind, resource string, namespaced
 	}
 }
 
-func FromStateHandlerToHandler(sync StateHandler) generic.Handler {
+func FromWorkspaceHandlerToHandler(sync WorkspaceHandler) generic.Handler {
 	return func(key string, obj runtime.Object) (ret runtime.Object, err error) {
-		var v *v1.State
+		var v *v1.Workspace
 		if obj == nil {
 			v, err = sync(key, nil)
 		} else {
-			v, err = sync(key, obj.(*v1.State))
+			v, err = sync(key, obj.(*v1.Workspace))
 		}
 		if v == nil {
 			return nil, err
@@ -111,9 +111,9 @@ func FromStateHandlerToHandler(sync StateHandler) generic.Handler {
 	}
 }
 
-func (c *stateController) Updater() generic.Updater {
+func (c *workspaceController) Updater() generic.Updater {
 	return func(obj runtime.Object) (runtime.Object, error) {
-		newObj, err := c.Update(obj.(*v1.State))
+		newObj, err := c.Update(obj.(*v1.Workspace))
 		if newObj == nil {
 			return nil, err
 		}
@@ -121,7 +121,7 @@ func (c *stateController) Updater() generic.Updater {
 	}
 }
 
-func UpdateStateDeepCopyOnChange(client StateClient, obj *v1.State, handler func(obj *v1.State) (*v1.State, error)) (*v1.State, error) {
+func UpdateWorkspaceDeepCopyOnChange(client WorkspaceClient, obj *v1.Workspace, handler func(obj *v1.Workspace) (*v1.Workspace, error)) (*v1.Workspace, error) {
 	if obj == nil {
 		return obj, nil
 	}
@@ -138,92 +138,92 @@ func UpdateStateDeepCopyOnChange(client StateClient, obj *v1.State, handler func
 	return copyObj, err
 }
 
-func (c *stateController) AddGenericHandler(ctx context.Context, name string, handler generic.Handler) {
+func (c *workspaceController) AddGenericHandler(ctx context.Context, name string, handler generic.Handler) {
 	c.controller.RegisterHandler(ctx, name, controller.SharedControllerHandlerFunc(handler))
 }
 
-func (c *stateController) AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler) {
+func (c *workspaceController) AddGenericRemoveHandler(ctx context.Context, name string, handler generic.Handler) {
 	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), handler))
 }
 
-func (c *stateController) OnChange(ctx context.Context, name string, sync StateHandler) {
-	c.AddGenericHandler(ctx, name, FromStateHandlerToHandler(sync))
+func (c *workspaceController) OnChange(ctx context.Context, name string, sync WorkspaceHandler) {
+	c.AddGenericHandler(ctx, name, FromWorkspaceHandlerToHandler(sync))
 }
 
-func (c *stateController) OnRemove(ctx context.Context, name string, sync StateHandler) {
-	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), FromStateHandlerToHandler(sync)))
+func (c *workspaceController) OnRemove(ctx context.Context, name string, sync WorkspaceHandler) {
+	c.AddGenericHandler(ctx, name, generic.NewRemoveHandler(name, c.Updater(), FromWorkspaceHandlerToHandler(sync)))
 }
 
-func (c *stateController) Enqueue(namespace, name string) {
+func (c *workspaceController) Enqueue(namespace, name string) {
 	c.controller.Enqueue(namespace, name)
 }
 
-func (c *stateController) EnqueueAfter(namespace, name string, duration time.Duration) {
+func (c *workspaceController) EnqueueAfter(namespace, name string, duration time.Duration) {
 	c.controller.EnqueueAfter(namespace, name, duration)
 }
 
-func (c *stateController) Informer() cache.SharedIndexInformer {
+func (c *workspaceController) Informer() cache.SharedIndexInformer {
 	return c.controller.Informer()
 }
 
-func (c *stateController) GroupVersionKind() schema.GroupVersionKind {
+func (c *workspaceController) GroupVersionKind() schema.GroupVersionKind {
 	return c.gvk
 }
 
-func (c *stateController) Cache() StateCache {
-	return &stateCache{
+func (c *workspaceController) Cache() WorkspaceCache {
+	return &workspaceCache{
 		indexer:  c.Informer().GetIndexer(),
 		resource: c.groupResource,
 	}
 }
 
-func (c *stateController) Create(obj *v1.State) (*v1.State, error) {
-	result := &v1.State{}
+func (c *workspaceController) Create(obj *v1.Workspace) (*v1.Workspace, error) {
+	result := &v1.Workspace{}
 	return result, c.client.Create(context.TODO(), obj.Namespace, obj, result, metav1.CreateOptions{})
 }
 
-func (c *stateController) Update(obj *v1.State) (*v1.State, error) {
-	result := &v1.State{}
+func (c *workspaceController) Update(obj *v1.Workspace) (*v1.Workspace, error) {
+	result := &v1.Workspace{}
 	return result, c.client.Update(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
-func (c *stateController) UpdateStatus(obj *v1.State) (*v1.State, error) {
-	result := &v1.State{}
+func (c *workspaceController) UpdateStatus(obj *v1.Workspace) (*v1.Workspace, error) {
+	result := &v1.Workspace{}
 	return result, c.client.UpdateStatus(context.TODO(), obj.Namespace, obj, result, metav1.UpdateOptions{})
 }
 
-func (c *stateController) Delete(namespace, name string, options *metav1.DeleteOptions) error {
+func (c *workspaceController) Delete(namespace, name string, options *metav1.DeleteOptions) error {
 	if options == nil {
 		options = &metav1.DeleteOptions{}
 	}
 	return c.client.Delete(context.TODO(), namespace, name, *options)
 }
 
-func (c *stateController) Get(namespace, name string, options metav1.GetOptions) (*v1.State, error) {
-	result := &v1.State{}
+func (c *workspaceController) Get(namespace, name string, options metav1.GetOptions) (*v1.Workspace, error) {
+	result := &v1.Workspace{}
 	return result, c.client.Get(context.TODO(), namespace, name, result, options)
 }
 
-func (c *stateController) List(namespace string, opts metav1.ListOptions) (*v1.StateList, error) {
-	result := &v1.StateList{}
+func (c *workspaceController) List(namespace string, opts metav1.ListOptions) (*v1.WorkspaceList, error) {
+	result := &v1.WorkspaceList{}
 	return result, c.client.List(context.TODO(), namespace, result, opts)
 }
 
-func (c *stateController) Watch(namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+func (c *workspaceController) Watch(namespace string, opts metav1.ListOptions) (watch.Interface, error) {
 	return c.client.Watch(context.TODO(), namespace, opts)
 }
 
-func (c *stateController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (*v1.State, error) {
-	result := &v1.State{}
+func (c *workspaceController) Patch(namespace, name string, pt types.PatchType, data []byte, subresources ...string) (*v1.Workspace, error) {
+	result := &v1.Workspace{}
 	return result, c.client.Patch(context.TODO(), namespace, name, pt, data, result, metav1.PatchOptions{}, subresources...)
 }
 
-type stateCache struct {
+type workspaceCache struct {
 	indexer  cache.Indexer
 	resource schema.GroupResource
 }
 
-func (c *stateCache) Get(namespace, name string) (*v1.State, error) {
+func (c *workspaceCache) Get(namespace, name string) (*v1.Workspace, error) {
 	obj, exists, err := c.indexer.GetByKey(namespace + "/" + name)
 	if err != nil {
 		return nil, err
@@ -231,73 +231,73 @@ func (c *stateCache) Get(namespace, name string) (*v1.State, error) {
 	if !exists {
 		return nil, errors.NewNotFound(c.resource, name)
 	}
-	return obj.(*v1.State), nil
+	return obj.(*v1.Workspace), nil
 }
 
-func (c *stateCache) List(namespace string, selector labels.Selector) (ret []*v1.State, err error) {
+func (c *workspaceCache) List(namespace string, selector labels.Selector) (ret []*v1.Workspace, err error) {
 
 	err = cache.ListAllByNamespace(c.indexer, namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1.State))
+		ret = append(ret, m.(*v1.Workspace))
 	})
 
 	return ret, err
 }
 
-func (c *stateCache) AddIndexer(indexName string, indexer StateIndexer) {
+func (c *workspaceCache) AddIndexer(indexName string, indexer WorkspaceIndexer) {
 	utilruntime.Must(c.indexer.AddIndexers(map[string]cache.IndexFunc{
 		indexName: func(obj interface{}) (strings []string, e error) {
-			return indexer(obj.(*v1.State))
+			return indexer(obj.(*v1.Workspace))
 		},
 	}))
 }
 
-func (c *stateCache) GetByIndex(indexName, key string) (result []*v1.State, err error) {
+func (c *workspaceCache) GetByIndex(indexName, key string) (result []*v1.Workspace, err error) {
 	objs, err := c.indexer.ByIndex(indexName, key)
 	if err != nil {
 		return nil, err
 	}
-	result = make([]*v1.State, 0, len(objs))
+	result = make([]*v1.Workspace, 0, len(objs))
 	for _, obj := range objs {
-		result = append(result, obj.(*v1.State))
+		result = append(result, obj.(*v1.Workspace))
 	}
 	return result, nil
 }
 
-type StateStatusHandler func(obj *v1.State, status v1.StateStatus) (v1.StateStatus, error)
+type WorkspaceStatusHandler func(obj *v1.Workspace, status v1.WorkspaceStatus) (v1.WorkspaceStatus, error)
 
-type StateGeneratingHandler func(obj *v1.State, status v1.StateStatus) ([]runtime.Object, v1.StateStatus, error)
+type WorkspaceGeneratingHandler func(obj *v1.Workspace, status v1.WorkspaceStatus) ([]runtime.Object, v1.WorkspaceStatus, error)
 
-func RegisterStateStatusHandler(ctx context.Context, controller StateController, condition condition.Cond, name string, handler StateStatusHandler) {
-	statusHandler := &stateStatusHandler{
+func RegisterWorkspaceStatusHandler(ctx context.Context, controller WorkspaceController, condition condition.Cond, name string, handler WorkspaceStatusHandler) {
+	statusHandler := &workspaceStatusHandler{
 		client:    controller,
 		condition: condition,
 		handler:   handler,
 	}
-	controller.AddGenericHandler(ctx, name, FromStateHandlerToHandler(statusHandler.sync))
+	controller.AddGenericHandler(ctx, name, FromWorkspaceHandlerToHandler(statusHandler.sync))
 }
 
-func RegisterStateGeneratingHandler(ctx context.Context, controller StateController, apply apply.Apply,
-	condition condition.Cond, name string, handler StateGeneratingHandler, opts *generic.GeneratingHandlerOptions) {
-	statusHandler := &stateGeneratingHandler{
-		StateGeneratingHandler: handler,
-		apply:                  apply,
-		name:                   name,
-		gvk:                    controller.GroupVersionKind(),
+func RegisterWorkspaceGeneratingHandler(ctx context.Context, controller WorkspaceController, apply apply.Apply,
+	condition condition.Cond, name string, handler WorkspaceGeneratingHandler, opts *generic.GeneratingHandlerOptions) {
+	statusHandler := &workspaceGeneratingHandler{
+		WorkspaceGeneratingHandler: handler,
+		apply:                      apply,
+		name:                       name,
+		gvk:                        controller.GroupVersionKind(),
 	}
 	if opts != nil {
 		statusHandler.opts = *opts
 	}
 	controller.OnChange(ctx, name, statusHandler.Remove)
-	RegisterStateStatusHandler(ctx, controller, condition, name, statusHandler.Handle)
+	RegisterWorkspaceStatusHandler(ctx, controller, condition, name, statusHandler.Handle)
 }
 
-type stateStatusHandler struct {
-	client    StateClient
+type workspaceStatusHandler struct {
+	client    WorkspaceClient
 	condition condition.Cond
-	handler   StateStatusHandler
+	handler   WorkspaceStatusHandler
 }
 
-func (a *stateStatusHandler) sync(key string, obj *v1.State) (*v1.State, error) {
+func (a *workspaceStatusHandler) sync(key string, obj *v1.Workspace) (*v1.Workspace, error) {
 	if obj == nil {
 		return obj, nil
 	}
@@ -336,20 +336,20 @@ func (a *stateStatusHandler) sync(key string, obj *v1.State) (*v1.State, error) 
 	return obj, err
 }
 
-type stateGeneratingHandler struct {
-	StateGeneratingHandler
+type workspaceGeneratingHandler struct {
+	WorkspaceGeneratingHandler
 	apply apply.Apply
 	opts  generic.GeneratingHandlerOptions
 	gvk   schema.GroupVersionKind
 	name  string
 }
 
-func (a *stateGeneratingHandler) Remove(key string, obj *v1.State) (*v1.State, error) {
+func (a *workspaceGeneratingHandler) Remove(key string, obj *v1.Workspace) (*v1.Workspace, error) {
 	if obj != nil {
 		return obj, nil
 	}
 
-	obj = &v1.State{}
+	obj = &v1.Workspace{}
 	obj.Namespace, obj.Name = kv.RSplit(key, "/")
 	obj.SetGroupVersionKind(a.gvk)
 
@@ -359,8 +359,8 @@ func (a *stateGeneratingHandler) Remove(key string, obj *v1.State) (*v1.State, e
 		ApplyObjects()
 }
 
-func (a *stateGeneratingHandler) Handle(obj *v1.State, status v1.StateStatus) (v1.StateStatus, error) {
-	objs, newStatus, err := a.StateGeneratingHandler(obj, status)
+func (a *workspaceGeneratingHandler) Handle(obj *v1.Workspace, status v1.WorkspaceStatus) (v1.WorkspaceStatus, error) {
+	objs, newStatus, err := a.WorkspaceGeneratingHandler(obj, status)
 	if err != nil {
 		return newStatus, err
 	}

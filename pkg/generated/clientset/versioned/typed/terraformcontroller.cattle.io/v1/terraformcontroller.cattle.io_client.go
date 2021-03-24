@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Rancher Labs, Inc.
+Copyright 2021 Rancher Labs, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,7 +28,9 @@ type TerraformcontrollerV1Interface interface {
 	RESTClient() rest.Interface
 	ExecutionsGetter
 	ModulesGetter
+	OrganizationsGetter
 	StatesGetter
+	WorkspacesGetter
 }
 
 // TerraformcontrollerV1Client is used to interact with features provided by the terraformcontroller.cattle.io group.
@@ -44,8 +46,16 @@ func (c *TerraformcontrollerV1Client) Modules(namespace string) ModuleInterface 
 	return newModules(c, namespace)
 }
 
+func (c *TerraformcontrollerV1Client) Organizations(namespace string) OrganizationInterface {
+	return newOrganizations(c, namespace)
+}
+
 func (c *TerraformcontrollerV1Client) States(namespace string) StateInterface {
 	return newStates(c, namespace)
+}
+
+func (c *TerraformcontrollerV1Client) Workspaces(namespace string) WorkspaceInterface {
+	return newWorkspaces(c, namespace)
 }
 
 // NewForConfig creates a new TerraformcontrollerV1Client for the given config.

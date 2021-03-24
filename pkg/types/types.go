@@ -17,6 +17,8 @@ type Controllers struct {
 	Module             v1.ModuleController
 	State              v1.StateController
 	Execution          v1.ExecutionController
+	Organization       v1.OrganizationController
+	Workspace          v1.WorkspaceController
 	ClusterRole        rbacv1.ClusterRoleController
 	ClusterRoleBinding rbacv1.ClusterRoleBindingController
 	Secret             corev1.SecretController
