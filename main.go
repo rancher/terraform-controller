@@ -181,6 +181,8 @@ func withoutNamespace(cfg *rest.Config) (*types.Controllers, *types.Factories, e
 			Module:             tfFactory.Terraformcontroller().V1().Module(),
 			State:              tfFactory.Terraformcontroller().V1().State(),
 			Execution:          tfFactory.Terraformcontroller().V1().Execution(),
+			Organization:       tfFactory.Terraformcontroller().V1().Organization(),
+			Workspace:          tfFactory.Terraformcontroller().V1().Workspace(),
 			ClusterRole:        rbacFactory.Rbac().V1().ClusterRole(),
 			ClusterRoleBinding: rbacFactory.Rbac().V1().ClusterRoleBinding(),
 			Secret:             coreFactory.Core().V1().Secret(),

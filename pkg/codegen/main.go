@@ -16,8 +16,11 @@ func main() {
 					v1.Module{},
 					v1.State{},
 					v1.Execution{},
+					v1.Organization{},
+					v1.Workspace{},
 				},
-				GenerateTypes: true,
+				GenerateTypes:   true,
+				GenerateClients: true,
 			},
 		},
 	})
