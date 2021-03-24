@@ -4,13 +4,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/hashicorp/go-tfe"
+	"github.com/rancher/terraform-controller/pkg/types"
 )
 
-func Register(r *gin.Engine) {
+var cs *types.Controllers
+
+func Register(r *gin.Engine, controllers *types.Controllers) error {
+	cs = controllers
 	r.GET("/api/v2/ping", ping)
 	r.GET("/.well-known/terraform.json", discovery)
 	r.GET("/api/v2/organizations/:org/entitlement-set", entitlement)
 	r.GET("/api/v2/organizations/:org/workspaces/:workspace", workspace)
+
+	return nil
 }
 
 func ping(c *gin.Context) {
@@ -24,6 +30,7 @@ func entitlement(c *gin.Context) {
 	}
 	jsonapi.MarshalPayload(c.Writer, ent)
 }
+
 func discovery(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"tfe.v2":   "/api/v2/",
