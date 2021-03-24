@@ -13,6 +13,9 @@ import (
 	//"github.com/sirupsen/logrus"
 	"compress/gzip"
 
+	"k8s.io/utils/pointer"
+
+	coordv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -61,10 +64,27 @@ func workspace(c *gin.Context) {
 }
 
 func stateLock(c *gin.Context) {
-	c.String(200, "OK")
+	//ws = c.Param("workspace")
+	lockID := "fake-tfe"
+	workspace := &tfe.Workspace{}
+	workspace.Name = c.Param("workspace")
+	workspace.ID = "ws-123"
+	workspace.Locked = true
+	lease, _ := cs.Coordination.Get("default", "lock-tfstate-default-my-state", metav1.GetOptions{})
+	lease.Spec = coordv1.LeaseSpec{HolderIdentity: pointer.StringPtr(lockID)}
+	cs.Coordination.Update(lease)
+	jsonapi.MarshalPayload(c.Writer, workspace)
 }
 func stateUnlock(c *gin.Context) {
-	c.String(200, "OK")
+	//ws = c.Param("workspace")
+	workspace := &tfe.Workspace{}
+	workspace.Name = c.Param("workspace")
+	workspace.ID = "ws-123"
+	workspace.Locked = false
+	lease, _ := cs.Coordination.Get("default", "lock-tfstate-default-my-state", metav1.GetOptions{})
+	lease.Spec.HolderIdentity = nil
+	cs.Coordination.Update(lease)
+	jsonapi.MarshalPayload(c.Writer, workspace)
 }
 func state(c *gin.Context) {
 	c.Header("Content-Type", jsonapi.MediaType)

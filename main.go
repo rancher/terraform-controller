@@ -14,6 +14,7 @@ import (
 	"github.com/rancher/terraform-controller/pkg/controller"
 	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
 	"github.com/rancher/terraform-controller/pkg/types"
+	"github.com/rancher/wrangler-api/pkg/generated/controllers/coordination.k8s.io"
 	"github.com/rancher/wrangler/pkg/generated/controllers/batch"
 	"github.com/rancher/wrangler/pkg/generated/controllers/core"
 	"github.com/rancher/wrangler/pkg/generated/controllers/rbac"
@@ -217,6 +218,11 @@ func withNamespace(cfg *rest.Config, ns string) (*types.Controllers, *types.Fact
 		return nil, nil, fmt.Errorf("error building rbac controllers: %s", err.Error())
 	}
 
+	coordFactory, err := coordination.NewFactoryFromConfigWithNamespace(cfg, ns)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building rbac controllers: %s", err.Error())
+	}
+
 	return &types.Controllers{
 			Module:             tfFactory.Terraformcontroller().V1().Module(),
 			State:              tfFactory.Terraformcontroller().V1().State(),
@@ -227,6 +233,7 @@ func withNamespace(cfg *rest.Config, ns string) (*types.Controllers, *types.Fact
 			ConfigMap:          coreFactory.Core().V1().ConfigMap(),
 			ServiceAccount:     coreFactory.Core().V1().ServiceAccount(),
 			Job:                batchFactory.Batch().V1().Job(),
+			Coordination:       coordFactory.Coordination().V1().Lease(),
 		}, &types.Factories{
 			Tf:    tfFactory,
 			Core:  coreFactory,
