@@ -3,6 +3,8 @@ package types
 import (
 	"github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io"
 	v1 "github.com/rancher/terraform-controller/pkg/generated/controllers/terraformcontroller.cattle.io/v1"
+	"github.com/rancher/wrangler-api/pkg/generated/controllers/coordination.k8s.io"
+	coordv1 "github.com/rancher/wrangler-api/pkg/generated/controllers/coordination.k8s.io/v1"
 	"github.com/rancher/wrangler/pkg/generated/controllers/batch"
 	batchv1 "github.com/rancher/wrangler/pkg/generated/controllers/batch/v1"
 	"github.com/rancher/wrangler/pkg/generated/controllers/core"
@@ -21,6 +23,7 @@ type Controllers struct {
 	ConfigMap          corev1.ConfigMapController
 	ServiceAccount     corev1.ServiceAccountController
 	Job                batchv1.JobController
+	Coordination       coordv1.LeaseController
 }
 
 type Factories struct {
@@ -28,4 +31,5 @@ type Factories struct {
 	Core  *core.Factory
 	Rbac  *rbac.Factory
 	Batch *batch.Factory
+	Lease *coordination.Factory
 }
