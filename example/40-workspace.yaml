@@ -1,0 +1,6 @@
+apiVersion: terraformcontroller.cattle.io/v1
+kind: Workspace
+metadata:
+  name: bridle
+spec:
+  id: "123"
