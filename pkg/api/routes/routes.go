@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/hashicorp/go-tfe"
+	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/types"
 
 	"compress/gzip"
@@ -59,33 +60,53 @@ func discovery(c *gin.Context) {
 	})
 }
 
+func getWorkspace(spec *v1.WorkspaceSpec) *tfe.Workspace {
+	workspace := new(tfe.Workspace)
+	workspace.Name = spec.Name
+	workspace.ID = spec.Name
+	return workspace
+}
+
+func getStateName(state string) string {
+	return fmt.Sprintf("tfstate-default-%s", state)
+}
+func getLockName(state string) string {
+	return fmt.Sprintf("lock-tfstate-default-%s", state)
+}
 func workspace(c *gin.Context) {
 	c.Header("Content-Type", jsonapi.MediaType)
-	workspace := &tfe.Workspace{}
-	workspace.Name = c.Param("workspace")
-	workspace.ID = "ws-123"
+	wsParam := c.Param("workspace")
+	ws, err := cs.Workspace.Get("default", wsParam, metav1.GetOptions{})
+	if err != nil {
+		logrus.Error(err)
+	}
+	workspace := getWorkspace(&ws.Spec)
 	jsonapi.MarshalPayload(c.Writer, workspace)
 }
 
 func stateLock(c *gin.Context) {
-	//ws = c.Param("workspace")
+	wsParam := c.Param("workspace")
 	lockID := "fake-tfe"
-	workspace := &tfe.Workspace{}
-	workspace.Name = c.Param("workspace")
-	workspace.ID = "ws-123"
+	ws, err := cs.Workspace.Get("default", wsParam, metav1.GetOptions{})
+	if err != nil {
+		logrus.Error(err)
+	}
+	workspace := getWorkspace(&ws.Spec)
 	workspace.Locked = true
-	lease, _ := cs.Coordination.Get("default", "lock-tfstate-default-my-state", metav1.GetOptions{})
+	lease, _ := cs.Coordination.Get("default", getLockName(ws.Spec.State), metav1.GetOptions{})
 	lease.Spec = coordv1.LeaseSpec{HolderIdentity: pointer.StringPtr(lockID)}
 	cs.Coordination.Update(lease)
 	jsonapi.MarshalPayload(c.Writer, workspace)
 }
 func stateUnlock(c *gin.Context) {
-	//ws = c.Param("workspace")
-	workspace := &tfe.Workspace{}
-	workspace.Name = c.Param("workspace")
-	workspace.ID = "ws-123"
+	wsParam := c.Param("workspace")
+	ws, err := cs.Workspace.Get("default", wsParam, metav1.GetOptions{})
+	if err != nil {
+		logrus.Error(err)
+	}
+	workspace := getWorkspace(&ws.Spec)
 	workspace.Locked = false
-	lease, _ := cs.Coordination.Get("default", "lock-tfstate-default-my-state", metav1.GetOptions{})
+	lease, _ := cs.Coordination.Get("default", getLockName(ws.Spec.State), metav1.GetOptions{})
 	lease.Spec.HolderIdentity = nil
 	cs.Coordination.Update(lease)
 	jsonapi.MarshalPayload(c.Writer, workspace)
@@ -100,12 +121,18 @@ func state(c *gin.Context) {
 }
 
 func stateUpdate(c *gin.Context) {
+	wsParam := c.Param("workspace")
 	newState := new(tfe.StateVersionCreateOptions)
-	err := jsonapi.UnmarshalPayload(c.Request.Body, newState)
+	ws, err := cs.Workspace.Get("default", wsParam, metav1.GetOptions{})
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	err = jsonapi.UnmarshalPayload(c.Request.Body, newState)
 	if err != nil {
 		logrus.Error(err.Error())
 	}
-	secret, _ := cs.Secret.Get("default", "tfstate-default-my-state", metav1.GetOptions{})
+	secret, _ := cs.Secret.Get("default", getStateName(ws.Spec.State), metav1.GetOptions{})
 	secretData, _ := b64.StdEncoding.DecodeString(*newState.State)
 	gzippedData, _ := gzipData(secretData)
 	secret.Data["tfstate"] = gzippedData
@@ -117,8 +144,12 @@ func stateUpdate(c *gin.Context) {
 
 func stateDownload(c *gin.Context) {
 	c.Header("Content-Type", jsonapi.MediaType)
-	//	ws := c.Param("workspace")
-	secret, _ := cs.Secret.Get("default", "tfstate-default-my-state", metav1.GetOptions{})
+	wsParam := c.Param("workspace")
+	ws, err := cs.Workspace.Get("default", wsParam, metav1.GetOptions{})
+	if err != nil {
+		logrus.Error(err)
+	}
+	secret, _ := cs.Secret.Get("default", getStateName(ws.Spec.State), metav1.GetOptions{})
 	state, _ := gunzip(secret.Data["tfstate"])
 	c.String(200, state)
 }

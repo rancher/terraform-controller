@@ -157,9 +157,10 @@ type Workspace struct {
 }
 
 type WorkspaceSpec struct {
-	ID        string `json:""`
+	ID        string `json:"id,"`
 	AutoApply bool   `json:""`
-	Name      string `json:""`
+	Name      string `json:"name"`
+	State     string `json:"state"`
 }
 
 type WorkspaceStatus struct {

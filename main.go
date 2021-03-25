@@ -73,7 +73,6 @@ func main() {
 		cli.StringFlag{
 			Name:   "namespace",
 			EnvVar: "NAMESPACE",
-			Value:  "default",
 			Usage:  "The namespace to run the kubernetes controller in",
 		},
 		cli.StringFlag{
@@ -178,6 +177,11 @@ func withoutNamespace(cfg *rest.Config) (*types.Controllers, *types.Factories, e
 		return nil, nil, fmt.Errorf("error building rbac controllers: %s", err.Error())
 	}
 
+	coordFactory, err := coordination.NewFactoryFromConfig(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error building rbac controllers: %s", err.Error())
+	}
+
 	return &types.Controllers{
 			Module:             tfFactory.Terraformcontroller().V1().Module(),
 			State:              tfFactory.Terraformcontroller().V1().State(),
@@ -190,6 +194,7 @@ func withoutNamespace(cfg *rest.Config) (*types.Controllers, *types.Factories, e
 			ConfigMap:          coreFactory.Core().V1().ConfigMap(),
 			ServiceAccount:     coreFactory.Core().V1().ServiceAccount(),
 			Job:                batchFactory.Batch().V1().Job(),
+			Coordination:       coordFactory.Coordination().V1().Lease(),
 		}, &types.Factories{
 			Tf:    tfFactory,
 			Core:  coreFactory,
@@ -232,6 +237,8 @@ func withNamespace(cfg *rest.Config, ns string) (*types.Controllers, *types.Fact
 			ClusterRole:        rbacFactory.Rbac().V1().ClusterRole(),
 			ClusterRoleBinding: rbacFactory.Rbac().V1().ClusterRoleBinding(),
 			Secret:             coreFactory.Core().V1().Secret(),
+			Organization:       tfFactory.Terraformcontroller().V1().Organization(),
+			Workspace:          tfFactory.Terraformcontroller().V1().Workspace(),
 			ConfigMap:          coreFactory.Core().V1().ConfigMap(),
 			ServiceAccount:     coreFactory.Core().V1().ServiceAccount(),
 			Job:                batchFactory.Batch().V1().Job(),
