@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/hashicorp/go-tfe"
-	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/types"
 
 	"compress/gzip"
@@ -60,10 +59,10 @@ func discovery(c *gin.Context) {
 	})
 }
 
-func getWorkspace(spec *v1.WorkspaceSpec) *tfe.Workspace {
+func getWorkspace(ws *metav1.ObjectMeta) *tfe.Workspace {
 	workspace := new(tfe.Workspace)
-	workspace.Name = spec.Name
-	workspace.ID = spec.Name
+	workspace.Name = ws.Name
+	workspace.ID = ws.Name
 	return workspace
 }
 
@@ -80,7 +79,7 @@ func workspace(c *gin.Context) {
 	if err != nil {
 		logrus.Error(err)
 	}
-	workspace := getWorkspace(&ws.Spec)
+	workspace := getWorkspace(&ws.ObjectMeta)
 	jsonapi.MarshalPayload(c.Writer, workspace)
 }
 
@@ -91,7 +90,7 @@ func stateLock(c *gin.Context) {
 	if err != nil {
 		logrus.Error(err)
 	}
-	workspace := getWorkspace(&ws.Spec)
+	workspace := getWorkspace(&ws.ObjectMeta)
 	workspace.Locked = true
 	lease, _ := cs.Coordination.Get("default", getLockName(ws.Spec.State), metav1.GetOptions{})
 	lease.Spec = coordv1.LeaseSpec{HolderIdentity: pointer.StringPtr(lockID)}
@@ -104,7 +103,7 @@ func stateUnlock(c *gin.Context) {
 	if err != nil {
 		logrus.Error(err)
 	}
-	workspace := getWorkspace(&ws.Spec)
+	workspace := getWorkspace(&ws.ObjectMeta)
 	workspace.Locked = false
 	lease, _ := cs.Coordination.Get("default", getLockName(ws.Spec.State), metav1.GetOptions{})
 	lease.Spec.HolderIdentity = nil
