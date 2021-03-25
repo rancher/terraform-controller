@@ -2,25 +2,20 @@ package routes
 
 import (
 	"bytes"
+	"compress/gzip"
+	b64 "encoding/base64"
 	"fmt"
 	"io"
-
-	b64 "encoding/base64"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/hashicorp/go-tfe"
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
 	"github.com/rancher/terraform-controller/pkg/types"
-
-	"compress/gzip"
-
 	"github.com/sirupsen/logrus"
-
-	"k8s.io/utils/pointer"
-
 	coordv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 var cs *types.Controllers
@@ -60,11 +55,12 @@ func discovery(c *gin.Context) {
 	})
 }
 
-func getWorkspace(spec *v1.WorkspaceSpec) *tfe.Workspace {
-	workspace := new(tfe.Workspace)
-	workspace.Name = spec.Name
-	workspace.ID = spec.Name
-	return workspace
+func getWorkspace(ws *v1.Workspace) *tfe.Workspace {
+	return &tfe.Workspace{
+		Name:      ws.ObjectMeta.Name,
+		ID:        ws.ObjectMeta.Name,
+		AutoApply: ws.Spec.AutoApply,
+	}
 }
 
 func getStateName(state string) string {
@@ -80,7 +76,7 @@ func workspace(c *gin.Context) {
 	if err != nil {
 		logrus.Error(err)
 	}
-	workspace := getWorkspace(&ws.Spec)
+	workspace := getWorkspace(ws)
 	jsonapi.MarshalPayload(c.Writer, workspace)
 }
 
@@ -91,7 +87,7 @@ func stateLock(c *gin.Context) {
 	if err != nil {
 		logrus.Error(err)
 	}
-	workspace := getWorkspace(&ws.Spec)
+	workspace := getWorkspace(ws)
 	workspace.Locked = true
 	lease, _ := cs.Coordination.Get("default", getLockName(ws.Spec.State), metav1.GetOptions{})
 	lease.Spec = coordv1.LeaseSpec{HolderIdentity: pointer.StringPtr(lockID)}
@@ -104,7 +100,7 @@ func stateUnlock(c *gin.Context) {
 	if err != nil {
 		logrus.Error(err)
 	}
-	workspace := getWorkspace(&ws.Spec)
+	workspace := getWorkspace(ws)
 	workspace.Locked = false
 	lease, _ := cs.Coordination.Get("default", getLockName(ws.Spec.State), metav1.GetOptions{})
 	lease.Spec.HolderIdentity = nil

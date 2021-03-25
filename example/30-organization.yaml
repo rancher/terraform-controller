@@ -1,0 +1,7 @@
+apiVersion: terraformcontroller.cattle.io/v1
+kind: Organization
+metadata:
+  name: suse
+spec:
+  name: suse
+  email: suse@suse.com
