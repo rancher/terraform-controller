@@ -117,6 +117,7 @@ func state(c *gin.Context) {
 }
 
 func stateUpdate(c *gin.Context) {
+	c.Header("Content-Type", jsonapi.MediaType)
 	wsParam := c.Param("workspace")
 	newState := new(tfe.StateVersionCreateOptions)
 	ws, err := cs.Workspace.Get("default", wsParam, metav1.GetOptions{})
@@ -133,9 +134,10 @@ func stateUpdate(c *gin.Context) {
 	gzippedData, _ := gzipData(secretData)
 	secret.Data["tfstate"] = gzippedData
 	cs.Secret.Update(secret)
-	stateVersion := tfe.StateVersion{}
+	stateVersion := &tfe.StateVersion{}
+	stateVersion.Serial = *newState.Serial
+	stateVersion.DownloadURL = fmt.Sprintf("download/%s/state", wsParam)
 	jsonapi.MarshalPayload(c.Writer, stateVersion)
-
 }
 
 func stateDownload(c *gin.Context) {
