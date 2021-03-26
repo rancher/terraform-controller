@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-tfe"
 	v1 "github.com/rancher/terraform-controller/pkg/apis/terraformcontroller.cattle.io/v1"
@@ -58,6 +60,7 @@ func getLockName(state string) string {
 }
 
 func badRequest(c *gin.Context, err error) {
+	logrus.Debug(err)
 	c.JSON(http.StatusBadRequest, gin.H{
 		"error": err.Error(),
 	})
