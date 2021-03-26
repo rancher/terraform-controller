@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-tfe"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -24,15 +25,23 @@ func stateDownload(c *gin.Context) {
 		return
 	}
 
-	secret, err := cs.Secret.Get("default", getStateName(ws.Spec.State), metav1.GetOptions{})
+	var secret *corev1.Secret
+	secret, err = cs.Secret.Get("default", getStateName(ws.Spec.State), metav1.GetOptions{})
 	if err != nil {
-		badRequest(c, fmt.Errorf("error pulling secret %s: %s", getStateName(ws.Spec.State), err))
-		return
+		if !k8serrors.IsNotFound(err) {
+			badRequest(c, fmt.Errorf("error pulling secret %s: %s", getStateName(ws.Spec.State), err))
+			return
+		}
+		secret.Data = make(map[string][]byte)
 	}
-	state, err := gunzip(secret.Data["tfstate"])
-	if err != nil {
-		badRequest(c, fmt.Errorf("error un-gzipping state: %s", err))
-		return
+
+	var state string
+	if len(secret.Data) > 0 {
+		state, err = gunzip(secret.Data["tfstate"])
+		if err != nil {
+			badRequest(c, fmt.Errorf("error un-gzipping state: %s", err))
+			return
+		}
 	}
 
 	c.String(200, state)
